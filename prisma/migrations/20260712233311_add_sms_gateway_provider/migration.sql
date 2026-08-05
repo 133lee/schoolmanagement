@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "SMSProvider" ADD VALUE 'SMS_GATEWAY';
