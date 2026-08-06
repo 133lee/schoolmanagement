@@ -99,7 +99,7 @@ export default function LinkStudentsPage() {
     },
   });
 
-  const selectedStudentIds = form.watch("studentIds");
+  const selectedStudentIds: string[] = form.watch("studentIds");
 
   const handleSubmit = async (data: LinkGuardianFormValues) => {
     try {
@@ -154,20 +154,20 @@ export default function LinkStudentsPage() {
   };
 
   const toggleStudent = (studentId: string) => {
-    const current = form.getValues("studentIds");
+    const current: string[] = form.getValues("studentIds");
     const newValue = current.includes(studentId)
       ? current.filter((id) => id !== studentId)
       : [...current, studentId];
-    form.setValue("studentIds", newValue);
+    form.setValue("studentIds", newValue as never);
   };
 
   const toggleAll = () => {
     const allStudentIds = students.map((s: any) => s.id);
-    const current = form.getValues("studentIds");
+    const current: string[] = form.getValues("studentIds");
     if (current.length === students.length) {
-      form.setValue("studentIds", []);
+      form.setValue("studentIds", [] as never);
     } else {
-      form.setValue("studentIds", allStudentIds);
+      form.setValue("studentIds", allStudentIds as never);
     }
   };
 
