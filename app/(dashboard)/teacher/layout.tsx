@@ -5,7 +5,6 @@ import { TeacherSidebar } from "@/components/dashboard/teacher-sidebar";
 import { NotificationBell } from "@/components/teacher/notification-bell";
 import { NotificationsDrawer } from "@/components/teacher/notifications-drawer";
 import { MobileTeacherLayout } from "@/components/mobile/teacher/layout/mobile-teacher-layout";
-import { OfflineBanner } from "@/components/pwa/offline-banner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect, useState, useRef }from "react";
 
@@ -60,7 +59,6 @@ export default function TeacherLayout({
         >
           {children}
         </MobileTeacherLayout>
-        <OfflineBanner />
       </>
     );
   }
@@ -92,8 +90,6 @@ export default function TeacherLayout({
         onClose={() => setIsNotificationsOpen(false)}
         onNotificationUpdate={handleNotificationUpdate}
       />
-
-      <OfflineBanner />
     </SidebarProvider>
   );
 }

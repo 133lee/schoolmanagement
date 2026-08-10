@@ -1,6 +1,6 @@
 import prisma from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
-import { TeacherProfile } from "@/types/prisma-enums";
+import { TeacherProfile, TeacherSubjectRole } from "@/types/prisma-enums";
 
 /**
  * Teacher Repository - Data Access Layer
@@ -217,9 +217,15 @@ export class TeacherRepository {
   }
 
   /**
-   * Assign subjects to a teacher (replaces existing subjects)
+   * Assign subjects to a teacher (replaces existing subjects).
+   * Each subject carries an explicit role (PRIMARY/SECONDARY/PERMISSIBLE) so
+   * an edit form can later tell them apart reliably instead of guessing from
+   * insertion order.
    */
-  async assignSubjects(teacherId: string, subjectIds: string[]): Promise<void> {
+  async assignSubjects(
+    teacherId: string,
+    subjects: Array<{ subjectId: string; role: TeacherSubjectRole }>
+  ): Promise<void> {
     await prisma.$transaction(async (tx) => {
       // Delete existing subject assignments
       await tx.teacherSubject.deleteMany({
@@ -227,11 +233,12 @@ export class TeacherRepository {
       });
 
       // Create new subject assignments
-      if (subjectIds.length > 0) {
+      if (subjects.length > 0) {
         await tx.teacherSubject.createMany({
-          data: subjectIds.map((subjectId) => ({
+          data: subjects.map(({ subjectId, role }) => ({
             teacherId,
             subjectId,
+            role,
           })),
         });
       }

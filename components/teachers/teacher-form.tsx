@@ -79,12 +79,19 @@ const teacherFormSchema = z.object({
   // Step 4: Subject Specializations
   primarySubjectId: z.string().min(1, "Please select a primary subject"),
   secondarySubjectId: z.string().optional(),
+  permissibleSubjectId1: z.string().optional(),
+  permissibleSubjectId2: z.string().optional(),
 });
 
 type TeacherFormValues = z.infer<typeof teacherFormSchema>;
 
+type TeacherFormSubmitValues = Omit<
+  TeacherFormValues,
+  "permissibleSubjectId1" | "permissibleSubjectId2"
+> & { permissibleSubjectIds: string[] };
+
 interface TeacherFormProps {
-  onSubmit: (data: TeacherFormValues) => Promise<void>;
+  onSubmit: (data: TeacherFormSubmitValues) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
   initialData?: Partial<TeacherFormValues>;
@@ -140,6 +147,8 @@ export function TeacherForm({
       address: initialData?.address || "",
       primarySubjectId: initialData?.primarySubjectId || "",
       secondarySubjectId: initialData?.secondarySubjectId || "",
+      permissibleSubjectId1: initialData?.permissibleSubjectId1 || "",
+      permissibleSubjectId2: initialData?.permissibleSubjectId2 || "",
     },
   });
 
@@ -164,7 +173,12 @@ export function TeacherForm({
         fieldsToValidate = ["qualification", "yearsExperience", "address"];
         break;
       case 4:
-        fieldsToValidate = ["primarySubjectId", "secondarySubjectId"];
+        fieldsToValidate = [
+          "primarySubjectId",
+          "secondarySubjectId",
+          "permissibleSubjectId1",
+          "permissibleSubjectId2",
+        ];
         break;
     }
 
@@ -184,7 +198,11 @@ export function TeacherForm({
   };
 
   const handleFormSubmit = async (data: TeacherFormValues) => {
-    await onSubmit(data);
+    const { permissibleSubjectId1, permissibleSubjectId2, ...rest } = data;
+    const permissibleSubjectIds = [permissibleSubjectId1, permissibleSubjectId2].filter(
+      (id): id is string => Boolean(id)
+    );
+    await onSubmit({ ...rest, permissibleSubjectIds });
   };
 
   const progressPercentage = (currentStep / STEPS.length) * 100;
@@ -635,8 +653,8 @@ export function TeacherForm({
                   Subject Specializations
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Select the primary and secondary subjects this teacher
-                  specializes in
+                  Select the primary and, optionally, a secondary subject this
+                  teacher specializes in
                 </p>
               </div>
 
@@ -648,7 +666,15 @@ export function TeacherForm({
                     <FormItem>
                       <FormLabel>Primary Subject</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Permissible subjects are scoped to the primary
+                          // and secondary subjects' departments, so a
+                          // primary-subject change can invalidate prior
+                          // permissible-subject picks.
+                          form.setValue("permissibleSubjectId1", "");
+                          form.setValue("permissibleSubjectId2", "");
+                        }}
                         defaultValue={field.value}
                         disabled={loadingSubjects}>
                         <FormControl>
@@ -684,9 +710,12 @@ export function TeacherForm({
                         </span>
                       </FormLabel>
                       <Select
-                        onValueChange={(value) =>
-                          field.onChange(value === "NONE" ? "" : value)
-                        }
+                        onValueChange={(value) => {
+                          field.onChange(value === "NONE" ? "" : value);
+                          // Same reasoning as the primary subject above.
+                          form.setValue("permissibleSubjectId1", "");
+                          form.setValue("permissibleSubjectId2", "");
+                        }}
                         value={field.value || "NONE"}
                         disabled={loadingSubjects}>
                         <FormControl>
@@ -716,6 +745,126 @@ export function TeacherForm({
                   )}
                 />
               </div>
+
+              {(() => {
+                const primarySubjectId = form.watch("primarySubjectId");
+                const secondarySubjectId = form.watch("secondarySubjectId");
+                const primaryDepartmentId = subjects.find(
+                  (s) => s.id === primarySubjectId
+                )?.departmentId;
+                const secondaryDepartmentId = subjects.find(
+                  (s) => s.id === secondarySubjectId
+                )?.departmentId;
+                const permissible1 = form.watch("permissibleSubjectId1");
+                const permissible2 = form.watch("permissibleSubjectId2");
+
+                const reserved = new Set(
+                  [primarySubjectId, secondarySubjectId].filter(Boolean)
+                );
+                const allowedDepartmentIds = new Set(
+                  [primaryDepartmentId, secondaryDepartmentId].filter(Boolean)
+                );
+                const departmentSubjects = subjects.filter(
+                  (s) =>
+                    !reserved.has(s.id) &&
+                    s.departmentId &&
+                    allowedDepartmentIds.has(s.departmentId)
+                );
+
+                return (
+                  <div className="space-y-2">
+                    <div>
+                      <h4 className="text-sm font-semibold">
+                        Permissible Subjects{" "}
+                        <span className="text-muted-foreground font-normal">
+                          (Optional, up to 2)
+                        </span>
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Extra subjects this teacher may also teach, limited to
+                        the primary or secondary subject's department
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="permissibleSubjectId1"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Permissible Subject 1{" "}
+                              <span className="text-muted-foreground">
+                                (Optional)
+                              </span>
+                            </FormLabel>
+                            <Select
+                              onValueChange={(value) =>
+                                field.onChange(value === "NONE" ? "" : value)
+                              }
+                              value={field.value || "NONE"}
+                              disabled={loadingSubjects || !primarySubjectId}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a permissible subject" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="NONE">None</SelectItem>
+                                {departmentSubjects
+                                  .filter((subject) => subject.id !== permissible2)
+                                  .map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
+                                      {subject.name} ({subject.code})
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="permissibleSubjectId2"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Permissible Subject 2{" "}
+                              <span className="text-muted-foreground">
+                                (Optional)
+                              </span>
+                            </FormLabel>
+                            <Select
+                              onValueChange={(value) =>
+                                field.onChange(value === "NONE" ? "" : value)
+                              }
+                              value={field.value || "NONE"}
+                              disabled={loadingSubjects || !primarySubjectId}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a permissible subject" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="NONE">None</SelectItem>
+                                {departmentSubjects
+                                  .filter((subject) => subject.id !== permissible1)
+                                  .map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
+                                      {subject.name} ({subject.code})
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
 
               {loadingSubjects && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -835,6 +984,29 @@ export function TeacherForm({
                         return secondarySubject
                           ? `${secondarySubject.name} (${secondarySubject.code})`
                           : "None";
+                      })()}
+                    </dd>
+                    <dt className="text-muted-foreground">
+                      Permissible Subjects:
+                    </dt>
+                    <dd className="font-medium">
+                      {(() => {
+                        const permissibleIds = [
+                          form.getValues("permissibleSubjectId1"),
+                          form.getValues("permissibleSubjectId2"),
+                        ].filter((id): id is string => Boolean(id));
+
+                        if (permissibleIds.length === 0) return "None";
+
+                        return permissibleIds
+                          .map((id) => {
+                            const subject = subjects.find((s) => s.id === id);
+                            return subject
+                              ? `${subject.name} (${subject.code})`
+                              : null;
+                          })
+                          .filter(Boolean)
+                          .join(", ");
                       })()}
                     </dd>
                   </dl>

@@ -13,6 +13,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,6 +43,7 @@ interface CurriculumAssignmentModalProps {
   curriculum: CurriculumItem[];
   teachers: AssignableTeacher[];
   onAssign: (classSubjectId: string, teacherId: string) => Promise<void>;
+  onUnassign?: (assignmentId: string) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -55,11 +66,14 @@ export function CurriculumAssignmentModal({
   curriculum,
   teachers,
   onAssign,
+  onUnassign,
   isLoading,
 }: CurriculumAssignmentModalProps) {
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>("");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUnassigning, setIsUnassigning] = useState(false);
+  const [showUnassignConfirm, setShowUnassignConfirm] = useState(false);
 
   // Get the selected curriculum item
   const selectedCurriculum = useMemo(
@@ -128,7 +142,23 @@ export function CurriculumAssignmentModal({
     onClose();
   };
 
+  const handleUnassignConfirm = async () => {
+    if (!onUnassign || !selectedCurriculum?.currentAssignment) return;
+
+    setIsUnassigning(true);
+    try {
+      await onUnassign(selectedCurriculum.currentAssignment.id);
+      setSelectedTeacherId("");
+    } catch (error) {
+      console.error("Unassign failed:", error);
+    } finally {
+      setIsUnassigning(false);
+      setShowUnassignConfirm(false);
+    }
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
@@ -290,13 +320,27 @@ export function CurriculumAssignmentModal({
           {selectedCurriculum?.currentAssignment && (
             <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
               <CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-600">
-                Currently assigned to:{" "}
-                <strong>
-                  {selectedCurriculum.currentAssignment.teacher.name}
-                </strong>
-                . Creating a new assignment will replace the existing one.
-              </p>
+              <div className="text-sm text-blue-600 flex-1">
+                <p>
+                  Currently assigned to:{" "}
+                  <strong>
+                    {selectedCurriculum.currentAssignment.teacher.name}
+                  </strong>
+                  . Picking a different teacher below will replace the existing
+                  assignment, or you can remove it entirely.
+                </p>
+                {onUnassign && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setShowUnassignConfirm(true)}
+                    disabled={isUnassigning || isSubmitting}
+                  >
+                    {isUnassigning ? "Unassigning..." : "Unassign Teacher"}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -316,5 +360,37 @@ export function CurriculumAssignmentModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Unassign Confirmation */}
+    <AlertDialog open={showUnassignConfirm} onOpenChange={setShowUnassignConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unassign Teacher</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedCurriculum?.currentAssignment && (
+                <>
+                  Remove{" "}
+                  <strong>{selectedCurriculum.currentAssignment.teacher.name}</strong>{" "}
+                  from teaching {selectedCurriculum.subject.name}
+                  {selectedCurriculum &&
+                    ` for ${formatClassLabel(selectedCurriculum.class.grade.name, selectedCurriculum.class.name)}`}
+                  ? This can be undone by assigning a teacher again.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUnassigning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnassignConfirm}
+              disabled={isUnassigning}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isUnassigning ? "Unassigning..." : "Unassign"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

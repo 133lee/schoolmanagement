@@ -339,28 +339,63 @@ export class CurriculumManagementRepository {
 
   /**
    * Bulk assign subjects to a class/stream
-   * Replaces all existing assignments
+   *
+   * Diffs against the class's existing curriculum instead of blindly replacing every
+   * row: subjects that stay in the curriculum are updated in place (same ClassSubject
+   * id), so any SubjectTeacherAssignment linked via classSubjectId stays valid and
+   * untouched. Subjects dropped from the curriculum have their (open-year) teacher
+   * assignment cleared along with the ClassSubject row, instead of leaving an orphaned
+   * assignment that still counts toward the teacher's workload. New subjects get a
+   * fresh ClassSubject row.
    */
   async bulkAssignSubjectsToClass(
     classId: string,
     subjects: Array<{ subjectId: string; isCore: boolean; periodsPerWeek?: number }>
   ) {
     return prisma.$transaction(async (tx) => {
-      // Delete existing assignments
-      await tx.classSubject.deleteMany({
+      const existing = await tx.classSubject.findMany({
         where: { classId },
+        select: { id: true, subjectId: true },
       });
+      const existingBySubjectId = new Map(existing.map((cs) => [cs.subjectId, cs]));
+      const incomingSubjectIds = new Set(subjects.map((s) => s.subjectId));
 
-      // Create new assignments
-      if (subjects.length > 0) {
-        await tx.classSubject.createMany({
-          data: subjects.map((s) => ({
+      const removed = existing.filter((cs) => !incomingSubjectIds.has(cs.subjectId));
+
+      if (removed.length > 0) {
+        await tx.subjectTeacherAssignment.deleteMany({
+          where: {
             classId,
-            subjectId: s.subjectId,
-            isCore: s.isCore,
-            periodsPerWeek: s.periodsPerWeek ?? 5, // Default to 5 periods per week if not specified
-          })),
+            subjectId: { in: removed.map((cs) => cs.subjectId) },
+            academicYear: { isClosed: false },
+          },
         });
+
+        await tx.classSubject.deleteMany({
+          where: { id: { in: removed.map((cs) => cs.id) } },
+        });
+      }
+
+      for (const s of subjects) {
+        const current = existingBySubjectId.get(s.subjectId);
+        if (current) {
+          await tx.classSubject.update({
+            where: { id: current.id },
+            data: {
+              isCore: s.isCore,
+              periodsPerWeek: s.periodsPerWeek ?? 5,
+            },
+          });
+        } else {
+          await tx.classSubject.create({
+            data: {
+              classId,
+              subjectId: s.subjectId,
+              isCore: s.isCore,
+              periodsPerWeek: s.periodsPerWeek ?? 5, // Default to 5 periods per week if not specified
+            },
+          });
+        }
       }
 
       // Return updated class with subjects

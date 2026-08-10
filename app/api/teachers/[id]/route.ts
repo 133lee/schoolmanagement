@@ -85,6 +85,7 @@ export const PATCH = withAuth(
       if (body.departmentId) input.departmentId = body.departmentId;
       if (body.primarySubjectId) input.primarySubjectId = body.primarySubjectId;
       if (body.secondarySubjectId) input.secondarySubjectId = body.secondarySubjectId;
+      if (Array.isArray(body.permissibleSubjectIds)) input.permissibleSubjectIds = body.permissibleSubjectIds;
 
       const teacher = await teacherService.updateTeacher(id, input, context);
 

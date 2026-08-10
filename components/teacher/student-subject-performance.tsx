@@ -13,6 +13,7 @@ interface AssessmentScore {
   rank: number;
   total: number;
   trend: "up" | "down" | "same";
+  isAbsent?: boolean;
 }
 
 interface StudentSubjectPerformanceProps {
@@ -78,14 +79,19 @@ export function StudentSubjectPerformance({
     );
   }
 
-  const chartData = assessments.map((a) => ({
+  // Absent assessments have no real score, so they're excluded from the
+  // chart and average — including them as 0 would misrepresent both.
+  const presentAssessments = assessments.filter((a) => !a.isAbsent);
+  const chartData = presentAssessments.map((a) => ({
     assessment: a.type,
     score: a.score,
   }));
 
   const latestAssessment = assessments[assessments.length - 1];
   const averageScore =
-    assessments.reduce((sum, a) => sum + a.score, 0) / assessments.length;
+    presentAssessments.length > 0
+      ? presentAssessments.reduce((sum, a) => sum + a.score, 0) / presentAssessments.length
+      : 0;
 
   const trendClass =
     latestAssessment.trend === "up"   ? "bg-green-100 text-green-700 border-green-200"
@@ -131,7 +137,9 @@ export function StudentSubjectPerformance({
         <div className="grid grid-cols-3 text-center py-2 border-t mx-4 mt-1">
           <div>
             <p className="text-[10px] text-muted-foreground">Latest</p>
-            <p className="text-sm font-bold text-primary">{latestAssessment.score}%</p>
+            <p className="text-sm font-bold text-primary">
+              {latestAssessment.isAbsent ? "AB" : `${latestAssessment.score}%`}
+            </p>
           </div>
           <div className="border-x">
             <p className="text-[10px] text-muted-foreground">Avg</p>
@@ -139,7 +147,9 @@ export function StudentSubjectPerformance({
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground">Rank</p>
-            <p className="text-sm font-bold">{latestAssessment.rank}/{latestAssessment.total}</p>
+            <p className="text-sm font-bold">
+              {latestAssessment.isAbsent ? "—" : `${latestAssessment.rank}/${latestAssessment.total}`}
+            </p>
           </div>
         </div>
         {/* Score breakdown */}
@@ -147,7 +157,9 @@ export function StudentSubjectPerformance({
           {assessments.map((a) => (
             <div key={a.type} className="flex items-center gap-1.5 text-xs">
               <span className="text-muted-foreground">{a.type}</span>
-              <span className="font-semibold">{a.score}%</span>
+              <span className={cn("font-semibold", a.isAbsent && "text-amber-600 dark:text-amber-400")}>
+                {a.isAbsent ? "AB" : `${a.score}%`}
+              </span>
             </div>
           ))}
         </div>
@@ -186,7 +198,9 @@ export function StudentSubjectPerformance({
           <div className="grid grid-cols-3 gap-3 pt-2 border-t">
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Latest Score</p>
-              <p className="text-lg font-bold text-primary">{latestAssessment.score}%</p>
+              <p className="text-lg font-bold text-primary">
+                {latestAssessment.isAbsent ? "AB" : `${latestAssessment.score}%`}
+              </p>
             </div>
             <div className="text-center border-x">
               <p className="text-xs text-muted-foreground">Average</p>
@@ -196,7 +210,7 @@ export function StudentSubjectPerformance({
               <p className="text-xs text-muted-foreground">Latest Rank</p>
               <p className="text-lg font-bold flex items-center justify-center gap-1">
                 <Trophy className="h-4 w-4 text-yellow-600" />
-                {latestAssessment.rank}/{latestAssessment.total}
+                {latestAssessment.isAbsent ? "—" : `${latestAssessment.rank}/${latestAssessment.total}`}
               </p>
             </div>
           </div>
@@ -206,8 +220,14 @@ export function StudentSubjectPerformance({
               <div key={assessment.type} className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">{assessment.type}</span>
                 <div className="flex items-center gap-3">
-                  <span className="font-semibold">{assessment.score}%</span>
-                  <span className="text-muted-foreground">Rank {assessment.rank}/{assessment.total}</span>
+                  {assessment.isAbsent ? (
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">AB</span>
+                  ) : (
+                    <>
+                      <span className="font-semibold">{assessment.score}%</span>
+                      <span className="text-muted-foreground">Rank {assessment.rank}/{assessment.total}</span>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,12 +1,13 @@
 "use client";
 
-import { AlertTriangle, Pencil, ChevronDown } from "lucide-react";
+import { AlertTriangle, Pencil, ChevronDown, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -29,6 +30,7 @@ interface AssignmentMatrixProps {
   teachers: AssignmentTeacher[];
   assignments: Assignment[];
   onAssign: (subjectId: string, classId: string, teacherId: string) => void;
+  onUnassign?: (assignmentId: string) => void;
   isLoading?: boolean;
 }
 
@@ -38,6 +40,7 @@ export function AssignmentMatrix({
   teachers,
   assignments,
   onAssign,
+  onUnassign,
   isLoading = false,
 }: AssignmentMatrixProps) {
   const getAssignment = (subjectId: string, classId: string) => {
@@ -123,6 +126,11 @@ export function AssignmentMatrix({
                       onAssign={(teacherId) =>
                         onAssign(subject.id, cls.id, teacherId)
                       }
+                      onUnassign={
+                        onUnassign && assignment
+                          ? () => onUnassign(assignment.id)
+                          : undefined
+                      }
                     />
                   </td>
                 );
@@ -140,6 +148,7 @@ interface AssignmentCellProps {
   isAssigned: boolean;
   teachers: AssignmentTeacher[];
   onAssign: (teacherId: string) => void;
+  onUnassign?: () => void;
 }
 
 function AssignmentCell({
@@ -147,6 +156,7 @@ function AssignmentCell({
   isAssigned,
   teachers,
   onAssign,
+  onUnassign,
 }: AssignmentCellProps) {
   return (
     <DropdownMenu>
@@ -215,6 +225,18 @@ function AssignmentCell({
             </div>
           </DropdownMenuItem>
         ))}
+        {isAssigned && onUnassign && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onUnassign}
+              className="cursor-pointer text-destructive focus:text-destructive"
+            >
+              <UserMinus className="h-3.5 w-3.5 mr-2" />
+              Unassign
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

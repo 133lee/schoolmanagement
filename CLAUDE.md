@@ -173,42 +173,16 @@ templates directly, and Next's own bundler doesn't process files only ever reach
 this is proven necessary at actual scale. Don't reach for `worker_threads` here without first
 building and testing that separate build step end-to-end against a real production build.
 
-## Offline support (teacher module)
+## Offline support (removed, 2026-08-10)
 
-The pilot site has confirmed poor/inconsistent network coverage in some classrooms, and offline
-support is a stated product differentiator, not a hypothetical nice-to-have — so this is a real,
-deliberately-scoped piece of the architecture, not scaffolding to rip out later.
-
-**Phase 1 (implemented) — read-only cache, teacher module only.** A service worker
-(`app/sw.ts`, built via `@serwist/next`, output to `public/sw.js`) intercepts `fetch()` client-side.
-Any `GET` request whose path starts with `/api/teacher/` or `/api/terms` is cached with a
-`NetworkFirst` strategy (~4s network timeout, 7-day expiry) — this is a **pattern match, not a
-hardcoded URL list**, specifically so it doesn't silently miss new teacher routes as pages are
-added. Everything else — every non-GET request, and every GET outside those two prefixes (all
-`/api/admin/**`, `/api/hod/**`, and mutation endpoints) — is `NetworkOnly` and fails honestly when
-offline rather than serving something stale. This required **no changes to `withAuth` or any
-service/repository**: auth is header-based (`Authorization: Bearer`, not cookies), and a cached
-response is served entirely client-side before the request would ever reach `withAuth`, so there's
-no "offline auth grace period" to build for this phase. `app/manifest.ts` + an offline banner
-(`components/pwa/offline-banner.tsx`, mounted in `teacher/layout.tsx`) round it out so a teacher can
-install the app and never mistakes cached data for live data.
-
-**Build note**: `@serwist/next`'s `withSerwist` injects a webpack config, which conflicts with
-Turbopack (Next 16's default for `next build`). `npm run build` therefore runs
-`next build --webpack` explicitly (see `package.json`) — dev is unaffected (`next dev` stays on
-Turbopack; Serwist is `disable`d outside production in `next.config.ts`, so `public/sw.js` doesn't
-even exist in a dev build). `app/sw.ts` is excluded from the main `tsconfig.json` program (it needs
-the `webworker` lib, which conflicts with the app's `dom` lib in one shared TS program) — same
-pattern as `scripts/` already being excluded, not a new exception.
-
-**Phase 2 (not built) — offline writes.** Attendance marking, assessment entry, and any other
-mutation stay online-only for now. A write-sync layer (offline mutation queue, conflict resolution,
-client-generated IDs so offline-created records don't collide) is real future work, but was
-deliberately deferred until real pilot usage data shows which specific write flows teachers
-actually need offline most — building it speculatively now risks solving the wrong problem. If
-you're picking this up: don't retrofit IndexedDB into Phase 1's Cache-Storage-based reads to do
-this — Phase 2 needs its own structured local store for queued mutations, separate from the
-Phase 1 HTTP response cache.
+A Phase 1 read-only offline cache for the teacher module (service worker via `@serwist/next`,
+`app/sw.ts` → `public/sw.js`, `NetworkFirst` caching for `/api/teacher/**` and `/api/terms`, plus
+an install manifest and an offline banner) was built and shipped, but did not work reliably in
+practice and has been fully removed — `@serwist/next`/`serwist` are no longer dependencies,
+`next.config.ts` no longer wraps the config with Serwist, and `npm run build` runs plain
+`next build` again (the earlier `--webpack` flag existed solely to satisfy Serwist).
+**If offline support is revisited, don't just re-add the same service-worker approach without
+first diagnosing why Phase 1 didn't work** — re-shipping the same broken mechanism helps no one.
 
 ## Before marking any task done
 

@@ -239,6 +239,46 @@ describe("teacher performance & gradebook", () => {
       expect(json.data.quantityPass).toMatchObject({ passed: 1, total: 2, rate: 50 });
     });
 
+    it("tracks absent students separately and excludes them from recorded/pass-rate/grade stats", async () => {
+      const academicYear = await createTestAcademicYear();
+      const term = await createTestTerm(academicYear.id);
+      const grade = await createTestGrade();
+      const testClass = await createTestClass(grade.id);
+      const subject = await createTestSubject();
+      await assignSubjectTeacher(teacher.teacherProfile!.id, subject.id, testClass.id, academicYear.id);
+
+      const passingStudent = await createTestStudent({ firstName: "Pass", gender: "MALE" });
+      const absentStudent = await createTestStudent({ firstName: "Absent", gender: "FEMALE" });
+      await enrollTestStudent(passingStudent.id, testClass.id, academicYear.id);
+      await enrollTestStudent(absentStudent.id, testClass.id, academicYear.id);
+
+      const assessment = await createTestAssessment(subject.id, testClass.id, term.id, {
+        examType: "CAT",
+        totalMarks: 100,
+      });
+      await createTestAssessmentResult(passingStudent.id, assessment.id, 80);
+      // AB entries are stored as marksObtained=0, isAbsent=true — this must not
+      // be counted as a recorded score or a failing grade.
+      await createTestAssessmentResult(absentStudent.id, assessment.id, 0, { isAbsent: true });
+
+      const { status, json } = await callRoute<{
+        data: {
+          recordedEntries: { male: number; female: number; total: number };
+          absentStudents: { male: number; female: number; total: number };
+          quantityPass: { passed: number; total: number; rate: number };
+        };
+      }>(getGradebookAnalysis, {
+        url: `/api/teacher/gradebook/analysis?subjectId=${subject.id}&classId=${testClass.id}&termId=${term.id}`,
+        token: teacherToken,
+      });
+
+      expect(status).toBe(200);
+      expect(json.data.recordedEntries).toEqual({ male: 1, female: 0, total: 1 });
+      expect(json.data.absentStudents).toEqual({ male: 0, female: 1, total: 1 });
+      // Denominator is students who actually sat (1), not enrolled+absent (2).
+      expect(json.data.quantityPass).toMatchObject({ passed: 1, total: 1, rate: 100 });
+    });
+
     it("uses the configured academic-policy pass mark, not a hardcoded 40%", async () => {
       const admin = await createTestUser({ role: Role.ADMIN });
       const adminToken = await loginAs(admin.user.email, admin.password);

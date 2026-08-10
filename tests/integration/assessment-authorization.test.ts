@@ -110,6 +110,29 @@ describe("assessment authorization — teachers scoped to their own subjects", (
     expect(allowed.status).toBe(201);
   });
 
+  it("persists isAbsent on the single-result POST path (regression: the route silently dropped it, so a teacher's AB auto-save reverted to marksObtained=0 on reload)", async () => {
+    const assessment = await createTestAssessment(subjectId, classId, termId, { status: AssessmentStatus.PUBLISHED });
+    const student = await createTestStudent();
+
+    const { status, json } = await callRoute<{ data: { id: string; isAbsent: boolean } }>(postResults, {
+      method: "POST",
+      url: `/api/assessments/${assessment.id}/results`,
+      token: teacherAToken,
+      params: { id: assessment.id },
+      body: { studentId: student.id, marksObtained: 0, isAbsent: true },
+    });
+    expect(status).toBe(201);
+    expect(json.data.isAbsent).toBe(true);
+
+    // Confirm it round-trips correctly on reload too, not just in the create response.
+    const fetched = await callRoute<{ data: { isAbsent: boolean; marksObtained: number }[] }>(getResults, {
+      url: `/api/assessments/${assessment.id}/results`,
+      token: teacherAToken,
+      params: { id: assessment.id },
+    });
+    expect(fetched.json.data.find((r) => r.marksObtained === 0)?.isAbsent).toBe(true);
+  });
+
   it("blocks an unrelated teacher from creating an assessment for a subject/class they don't teach", async () => {
     const denied = await callRoute(postAssessment, {
       method: "POST",

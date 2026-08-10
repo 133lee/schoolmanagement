@@ -12,7 +12,17 @@ import {
 } from "@/app/api/admin/curriculum/grades/[gradeId]/subjects/[subjectId]/route";
 import { callRoute } from "../../helpers/callRoute";
 import { loginAs } from "../../helpers/auth";
-import { resetDb, createTestUser, createTestGrade, createTestClass, createTestSubject } from "../../helpers/db";
+import {
+  resetDb,
+  createTestUser,
+  createTestGrade,
+  createTestClass,
+  createTestSubject,
+  createTestAcademicYear,
+  createTestClassSubject,
+  assignTeacherSubject,
+} from "../../helpers/db";
+import prisma from "@/lib/db/prisma";
 
 describe("admin/curriculum", () => {
   let adminToken: string;
@@ -106,6 +116,78 @@ describe("admin/curriculum", () => {
     });
     expect(classSubjects.status).toBe(200);
     expect(classSubjects.json.data.map((s) => s.subjectId)).toContain(subjectA.id);
+  });
+
+  it("bulk-assigning a class curriculum keeps assignments for retained subjects and clears them for dropped ones", async () => {
+    const grade = await createTestGrade();
+    const testClass = await createTestClass(grade.id);
+    const subjectKept = await createTestSubject({ name: "Kept Subject" });
+    const subjectDropped = await createTestSubject({ name: "Dropped Subject" });
+    const subjectNew = await createTestSubject({ name: "New Subject" });
+
+    const classSubjectKept = await createTestClassSubject(testClass.id, subjectKept.id);
+    const classSubjectDropped = await createTestClassSubject(testClass.id, subjectDropped.id);
+
+    const academicYear = await createTestAcademicYear();
+    const teacher = await createTestUser({ role: Role.TEACHER });
+    await assignTeacherSubject(teacher.teacherProfile!.id, subjectKept.id);
+    await assignTeacherSubject(teacher.teacherProfile!.id, subjectDropped.id);
+
+    const assignmentKept = await prisma.subjectTeacherAssignment.create({
+      data: {
+        teacherId: teacher.teacherProfile!.id,
+        subjectId: subjectKept.id,
+        classId: testClass.id,
+        academicYearId: academicYear.id,
+        classSubjectId: classSubjectKept.id,
+      },
+    });
+    const assignmentDropped = await prisma.subjectTeacherAssignment.create({
+      data: {
+        teacherId: teacher.teacherProfile!.id,
+        subjectId: subjectDropped.id,
+        classId: testClass.id,
+        academicYearId: academicYear.id,
+        classSubjectId: classSubjectDropped.id,
+      },
+    });
+
+    // New curriculum: drop subjectDropped, keep subjectKept, add subjectNew
+    const { status } = await callRoute(bulkAssignClass, {
+      method: "PUT",
+      url: "/api/admin/curriculum/classes",
+      token: adminToken,
+      body: {
+        classId: testClass.id,
+        subjects: [
+          { subjectId: subjectKept.id, isCore: true, periodsPerWeek: 6 },
+          { subjectId: subjectNew.id, isCore: false, periodsPerWeek: 3 },
+        ],
+      },
+    });
+    expect(status).toBe(200);
+
+    // Kept subject: same ClassSubject id, updated periodsPerWeek, assignment untouched
+    const keptClassSubject = await prisma.classSubject.findUnique({ where: { id: classSubjectKept.id } });
+    expect(keptClassSubject?.periodsPerWeek).toBe(6);
+    const keptAssignment = await prisma.subjectTeacherAssignment.findUnique({
+      where: { id: assignmentKept.id },
+    });
+    expect(keptAssignment?.classSubjectId).toBe(classSubjectKept.id);
+
+    // Dropped subject: ClassSubject and its assignment are both gone
+    const droppedClassSubject = await prisma.classSubject.findUnique({ where: { id: classSubjectDropped.id } });
+    expect(droppedClassSubject).toBeNull();
+    const droppedAssignment = await prisma.subjectTeacherAssignment.findUnique({
+      where: { id: assignmentDropped.id },
+    });
+    expect(droppedAssignment).toBeNull();
+
+    // New subject: a fresh ClassSubject row now exists
+    const newClassSubject = await prisma.classSubject.findFirst({
+      where: { classId: testClass.id, subjectId: subjectNew.id },
+    });
+    expect(newClassSubject).not.toBeNull();
   });
 
   it("GET /api/admin/curriculum, /grades, /subjects allow HEAD_TEACHER but reject TEACHER", async () => {

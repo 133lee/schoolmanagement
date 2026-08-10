@@ -48,6 +48,7 @@ export {
   ExamType,
   ECZGrade,
   RoomType,
+  TeacherSubjectRole,
 
   // SMS
   SMSProvider,

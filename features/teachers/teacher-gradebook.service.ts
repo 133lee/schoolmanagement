@@ -238,9 +238,15 @@ export class TeacherGradebookService {
         },
       });
 
-      // Count recorded entries
+      // Count recorded entries (real marks) separately from absences — an AB
+      // entry is stored as marksObtained=0 with isAbsent=true, so it must not
+      // be counted as a recorded score, a graded result, or a failing pass/fail
+      // outcome anywhere below.
       results.forEach((result) => {
-        if (result.marksObtained !== null) {
+        if (result.isAbsent) {
+          if (result.student.gender === "MALE") absentMale++;
+          else absentFemale++;
+        } else if (result.marksObtained !== null) {
           if (result.student.gender === "MALE") recordedMale++;
           else recordedFemale++;
         }
@@ -257,9 +263,9 @@ export class TeacherGradebookService {
     // Get grade distribution structure from central grading system
     const gradeDistribution = getGradeDistributionStructure(gradeLevel);
 
-    // Categorize results by grade
+    // Categorize results by grade (absent students have no real grade to categorize)
     results.forEach((result) => {
-      if (result.grade && result.marksObtained !== null) {
+      if (!result.isAbsent && result.grade && result.marksObtained !== null) {
         const gradeEntry = gradeDistribution.find(
           (g) => g.gradeEnum === result.grade
         );
@@ -289,7 +295,7 @@ export class TeacherGradebookService {
     const passMark = await academicPolicyService.getSubjectPassMark(gradeLevel);
     const assessmentTotalMarks = assessment?.totalMarks || 100;
     const passedResults = results.filter((r) => {
-      if (r.marksObtained === null) return false;
+      if (r.isAbsent || r.marksObtained === null) return false;
       return (r.marksObtained / assessmentTotalMarks) * 100 >= passMark;
     });
     const passed = passedResults.length;
@@ -300,6 +306,7 @@ export class TeacherGradebookService {
     const distinctionGrades = getDistinctionGrades(gradeLevel);
     const qualityPasses = results.filter(
       (r) =>
+        !r.isAbsent &&
         r.marksObtained !== null &&
         r.grade &&
         distinctionGrades.includes(r.grade)

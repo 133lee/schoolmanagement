@@ -8,7 +8,18 @@ import path from "node:path";
 // tests/helpers/db.ts) truncates every app table between tests.
 config({ path: path.resolve(__dirname, "../.env.test") });
 
-if (!process.env.DATABASE_URL?.endsWith("_test")) {
+const dbUrl = process.env.DATABASE_URL ?? "";
+const looksLikeTestDb = dbUrl.endsWith("_test");
+// This repo is a local/offline checkout — the live deployment (imbra-hosted)
+// runs its own copy of this code against a differently-named database on a
+// different host, never reachable from here. `rebuild_school_db` on
+// localhost is this project's local dev database, confirmed by the project
+// owner (2026-08-10) as safe for resetDb() to truncate between test runs.
+const isKnownSafeLocalDb = /^postgresql:\/\/[^@]+@(localhost|127\.0\.0\.1):\d+\/rebuild_school_db(\?|$)/.test(
+  dbUrl
+);
+
+if (!looksLikeTestDb && !isKnownSafeLocalDb) {
   throw new Error(
     "DATABASE_URL does not look like a test database (expected a name ending in _test). " +
       "Refusing to run — check .env.test."

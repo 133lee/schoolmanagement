@@ -20,8 +20,10 @@ import {
  * rollback isolation isn't available; this is the pragmatic alternative.
  */
 export async function resetDb(): Promise<void> {
+  // tablename::text cast works around Prisma's query engine failing to
+  // deserialize Postgres's internal `name` column type against PG 18.
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != '_prisma_migrations'
+    SELECT tablename::text FROM pg_tables WHERE schemaname = 'public' AND tablename != '_prisma_migrations'
   `;
 
   if (tables.length === 0) return;

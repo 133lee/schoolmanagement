@@ -463,7 +463,8 @@ export function ImportStudentsDialog({
               <p className="font-medium">Required columns:</p>
               <p>
                 firstName, lastName, gender (MALE/FEMALE), dateOfBirth
-                (YYYY-MM-DD), admissionDate (YYYY-MM-DD)
+                (YYYY-MM-DD or DD/MM/YYYY), admissionDate (YYYY-MM-DD or
+                DD/MM/YYYY)
               </p>
               <p className="font-medium mt-2">Optional columns:</p>
               <p>

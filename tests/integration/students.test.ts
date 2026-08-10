@@ -233,6 +233,57 @@ describe("students routes", () => {
       expect(status).toBe(400);
     });
 
+    it("accepts both YYYY-MM-DD and DD/MM/YYYY dates, and rejects ambiguous/invalid ones", async () => {
+      const { status, json } = await callRoute<{
+        data: { successful: number; failed: number; errors: { row: number; error: string }[] };
+      }>(importStudents, {
+        method: "POST",
+        url: "/api/students/import",
+        token: clerkToken,
+        body: {
+          rows: [
+            {
+              // ISO format
+              firstName: "Iso",
+              lastName: "Format",
+              gender: "MALE",
+              dateOfBirth: "2012-01-15",
+              admissionDate: "2024-01-10",
+            },
+            {
+              // DD/MM/YYYY, as commonly produced by Excel re-saving the ISO template
+              firstName: "Slash",
+              lastName: "Format",
+              gender: "FEMALE",
+              dateOfBirth: "15/03/2012",
+              admissionDate: "10/01/2024",
+            },
+            {
+              // Neither ISO nor DD/MM/YYYY — must be rejected, not silently misparsed
+              firstName: "Bad",
+              lastName: "Format",
+              gender: "MALE",
+              dateOfBirth: "2012.01.15",
+              admissionDate: "2024-01-10",
+            },
+            {
+              // Day out of range for the given month
+              firstName: "OutOfRange",
+              lastName: "Format",
+              gender: "MALE",
+              dateOfBirth: "31/02/2012",
+              admissionDate: "2024-01-10",
+            },
+          ],
+        },
+      });
+
+      expect(status).toBe(200);
+      expect(json.data.successful).toBe(2);
+      expect(json.data.failed).toBe(2);
+      expect(json.data.errors.map((e) => e.row)).toEqual([4, 5]);
+    });
+
     it("rejects more than 500 rows", async () => {
       const rows = Array.from({ length: 501 }, (_, i) => ({
         firstName: `S${i}`,

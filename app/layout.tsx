@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/useAuth";
-import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,7 +39,6 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <Toaster position="top-right" richColors />
-            <ServiceWorkerRegister />
           </AuthProvider>
         </ThemeProvider>
       </body>

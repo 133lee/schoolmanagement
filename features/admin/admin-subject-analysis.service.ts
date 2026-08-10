@@ -279,9 +279,13 @@ export class AdminSubjectAnalysisService {
         },
       });
 
-      // Count recorded entries (students who actually sat for exam)
+      // Count recorded entries (students who actually sat and got a real
+      // mark) — an AB entry has marksObtained=0 with isAbsent=true, so it
+      // must not count as "recorded"; excluding it here means it falls
+      // through to the absentMale/absentFemale subtraction below, same as a
+      // student with no result row at all.
       results.forEach((result) => {
-        if (result.marksObtained !== null) {
+        if (!result.isAbsent && result.marksObtained !== null) {
           if (result.student.gender === "MALE") recordedMale++;
           else recordedFemale++;
         }
@@ -308,7 +312,7 @@ export class AdminSubjectAnalysisService {
 
     // STEP 6: Categorize results by grade (AGGREGATE across all classes)
     results.forEach((result) => {
-      if (result.grade && result.marksObtained !== null) {
+      if (!result.isAbsent && result.grade && result.marksObtained !== null) {
         const gradeEntry = gradeDistribution.find(
           (g) => g.gradeEnum === result.grade
         );
@@ -336,7 +340,7 @@ export class AdminSubjectAnalysisService {
     // pass mark (admin/settings/academic-policy), not a hardcoded value.
     const passMark = await academicPolicyService.getSubjectPassMark(gradeLevel);
     const passedResults = results.filter((r) => {
-      if (r.marksObtained === null) return false;
+      if (r.isAbsent || r.marksObtained === null) return false;
       const totalMarks = assessmentTotalMarks.get(r.assessmentId) || 100;
       const percentage = (r.marksObtained / totalMarks) * 100;
       return percentage >= passMark;
@@ -349,6 +353,7 @@ export class AdminSubjectAnalysisService {
     const distinctionGrades = getDistinctionGrades(gradeLevel);
     const qualityPasses = results.filter(
       (r) =>
+        !r.isAbsent &&
         r.marksObtained !== null &&
         r.grade &&
         distinctionGrades.includes(r.grade)
@@ -526,12 +531,12 @@ export class AdminSubjectAnalysisService {
           },
         });
 
-        const sat = results.filter((r) => r.marksObtained !== null).length;
+        const sat = results.filter((r) => !r.isAbsent && r.marksObtained !== null).length;
         const absent = totalEnrolled - sat;
 
         // Calculate pass rate against the school's configured subject pass mark.
         const passed = results.filter((r) => {
-          if (r.marksObtained === null) return false;
+          if (r.isAbsent || r.marksObtained === null) return false;
           const percentage = (r.marksObtained / assessment.totalMarks) * 100;
           return percentage >= passMark;
         }).length;
@@ -540,6 +545,7 @@ export class AdminSubjectAnalysisService {
         const distinctionGrades = getDistinctionGrades(overall.gradeLevel);
         const qualityPasses = results.filter(
           (r) =>
+            !r.isAbsent &&
             r.marksObtained !== null &&
             r.grade &&
             distinctionGrades.includes(r.grade)

@@ -46,7 +46,7 @@ export const POST = withAuth(
         return ApiResponse.created(result);
       }
 
-      const { studentId, marksObtained, remarks } = body;
+      const { studentId, marksObtained, remarks, isAbsent } = body;
 
       if (!studentId || marksObtained === undefined) {
         return ApiResponse.badRequest("Missing required fields");
@@ -54,7 +54,7 @@ export const POST = withAuth(
 
       const result = await assessmentService.enterResult(
         id,
-        { studentId, marksObtained, remarks },
+        { studentId, marksObtained, remarks, isAbsent },
         context
       );
 

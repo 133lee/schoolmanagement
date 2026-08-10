@@ -101,6 +101,9 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       hireDate: new Date(body.hireDate),
       primarySubjectId: body.primarySubjectId,
       secondarySubjectId: body.secondarySubjectId,
+      permissibleSubjectIds: Array.isArray(body.permissibleSubjectIds)
+        ? body.permissibleSubjectIds
+        : undefined,
     };
 
     const teacher = await teacherService.createTeacher(

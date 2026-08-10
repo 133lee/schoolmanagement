@@ -4,7 +4,13 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Gender, StaffStatus, QualificationLevel } from "@/types/prisma-enums";
+import {
+  Gender,
+  StaffStatus,
+  QualificationLevel,
+  TeacherProfile,
+  TeacherSubjectRole,
+} from "@/types/prisma-enums";
 
 import {
   Dialog,
@@ -50,9 +56,18 @@ const editTeacherSchema = z.object({
   address: z.string().optional(),
   primarySubjectId: z.string().min(1, "Please select a primary subject"),
   secondarySubjectId: z.string().optional(),
+  permissibleSubjectId1: z.string().optional(),
+  permissibleSubjectId2: z.string().optional(),
 });
 
 type EditTeacherFormValues = z.infer<typeof editTeacherSchema>;
+
+interface TeacherWithSubjects extends TeacherProfile {
+  subjects?: Array<{
+    subjectId: string;
+    role: TeacherSubjectRole;
+  }>;
+}
 
 interface EditTeacherDialogProps {
   open: boolean;
@@ -87,6 +102,8 @@ export function EditTeacherDialog({
       address: "",
       primarySubjectId: "",
       secondarySubjectId: "",
+      permissibleSubjectId1: "",
+      permissibleSubjectId2: "",
     },
   });
 
@@ -98,11 +115,22 @@ export function EditTeacherDialog({
     const fetchTeacher = async () => {
       try {
         setIsLoading(true);
-        const data = await getTeacher(teacherId, false);
+        const data = (await getTeacher(teacherId, true)) as TeacherWithSubjects;
 
-        // Get teacher subjects (if available)
-        const primarySubject = "";
-        const secondarySubject = "";
+        // Reconstruct primary/secondary/permissible from the role tagged on
+        // each TeacherSubject row (see TeacherSubjectRole) — without this,
+        // these fields would come up blank and re-saving would silently wipe
+        // out subjects that don't match whatever gets picked here.
+        const subjects = data.subjects ?? [];
+        const primarySubject =
+          subjects.find((s) => s.role === TeacherSubjectRole.PRIMARY)?.subjectId ?? "";
+        const secondarySubject =
+          subjects.find((s) => s.role === TeacherSubjectRole.SECONDARY)?.subjectId ?? "";
+        const permissible = subjects.filter(
+          (s) => s.role === TeacherSubjectRole.PERMISSIBLE
+        );
+        const permissibleSubject1 = permissible[0]?.subjectId ?? "";
+        const permissibleSubject2 = permissible[1]?.subjectId ?? "";
 
         form.reset({
           firstName: data.firstName,
@@ -116,6 +144,8 @@ export function EditTeacherDialog({
           address: data.address || "",
           primarySubjectId: primarySubject,
           secondarySubjectId: secondarySubject,
+          permissibleSubjectId1: permissibleSubject1,
+          permissibleSubjectId2: permissibleSubject2,
         });
       } catch (error) {
         toast({
@@ -154,6 +184,10 @@ export function EditTeacherDialog({
         address: data.address || undefined,
         primarySubjectId: data.primarySubjectId,
         secondarySubjectId: data.secondarySubjectId || undefined,
+        permissibleSubjectIds: [
+          data.permissibleSubjectId1,
+          data.permissibleSubjectId2,
+        ].filter((id): id is string => Boolean(id)),
       };
 
       await updateTeacher(teacherId, formattedData);
@@ -384,7 +418,18 @@ export function EditTeacherDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Primary Subject</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={loadingSubjects}>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Permissible subjects are scoped to the primary
+                          // and secondary subjects' departments, so a
+                          // primary-subject change can invalidate prior
+                          // permissible-subject picks.
+                          form.setValue("permissibleSubjectId1", "");
+                          form.setValue("permissibleSubjectId2", "");
+                        }}
+                        value={field.value}
+                        disabled={loadingSubjects}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select primary subject" />
@@ -412,7 +457,12 @@ export function EditTeacherDialog({
                         Secondary Subject <span className="text-muted-foreground">(Optional)</span>
                       </FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(value === "NONE" ? "" : value)}
+                        onValueChange={(value) => {
+                          field.onChange(value === "NONE" ? "" : value);
+                          // Same reasoning as the primary subject above.
+                          form.setValue("permissibleSubjectId1", "");
+                          form.setValue("permissibleSubjectId2", "");
+                        }}
                         value={field.value || "NONE"}
                         disabled={loadingSubjects}
                       >
@@ -436,6 +486,106 @@ export function EditTeacherDialog({
                     </FormItem>
                   )}
                 />
+
+                {(() => {
+                  const primarySubjectId = form.watch("primarySubjectId");
+                  const secondarySubjectId = form.watch("secondarySubjectId");
+                  const primaryDepartmentId = subjects.find(
+                    (s) => s.id === primarySubjectId
+                  )?.departmentId;
+                  const secondaryDepartmentId = subjects.find(
+                    (s) => s.id === secondarySubjectId
+                  )?.departmentId;
+                  const permissible1 = form.watch("permissibleSubjectId1");
+                  const permissible2 = form.watch("permissibleSubjectId2");
+
+                  const reserved = new Set(
+                    [primarySubjectId, secondarySubjectId].filter(Boolean)
+                  );
+                  const allowedDepartmentIds = new Set(
+                    [primaryDepartmentId, secondaryDepartmentId].filter(Boolean)
+                  );
+                  const departmentSubjects = subjects.filter(
+                    (s) =>
+                      !reserved.has(s.id) &&
+                      s.departmentId &&
+                      allowedDepartmentIds.has(s.departmentId)
+                  );
+
+                  return (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="permissibleSubjectId1"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Permissible Subject 1{" "}
+                              <span className="text-muted-foreground">(Optional)</span>
+                            </FormLabel>
+                            <Select
+                              onValueChange={(value) => field.onChange(value === "NONE" ? "" : value)}
+                              value={field.value || "NONE"}
+                              disabled={loadingSubjects || !primarySubjectId}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a permissible subject" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="NONE">None</SelectItem>
+                                {departmentSubjects
+                                  .filter((subject) => subject.id !== permissible2)
+                                  .map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
+                                      {subject.name} ({subject.code})
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="permissibleSubjectId2"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Permissible Subject 2{" "}
+                              <span className="text-muted-foreground">(Optional)</span>
+                            </FormLabel>
+                            <Select
+                              onValueChange={(value) => field.onChange(value === "NONE" ? "" : value)}
+                              value={field.value || "NONE"}
+                              disabled={loadingSubjects || !primarySubjectId}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a permissible subject" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="NONE">None</SelectItem>
+                                {departmentSubjects
+                                  .filter((subject) => subject.id !== permissible1)
+                                  .map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
+                                      {subject.name} ({subject.code})
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Action Buttons */}

@@ -11,7 +11,14 @@ import { POST as resetPassword } from "@/app/api/teachers/[id]/reset-password/ro
 import { GET as getTeacherWorkload } from "@/app/api/teachers/[id]/workload/route";
 import { callRoute } from "../helpers/callRoute";
 import { loginAs } from "../helpers/auth";
-import { resetDb, createTestUser, createTestSubject, createTestAcademicYear } from "../helpers/db";
+import {
+  resetDb,
+  createTestUser,
+  createTestSubject,
+  createTestAcademicYear,
+  createTestDepartment,
+} from "../helpers/db";
+import prisma from "@/lib/db/prisma";
 
 describe("teachers routes", () => {
   let adminToken: string;
@@ -159,6 +166,130 @@ describe("teachers routes", () => {
 
     const relogin = await loginAs("reset-target@example.com", "teacher123");
     expect(relogin).toBeTruthy();
+  });
+
+  it("accepts up to 2 permissible subjects in the primary subject's department, tagging PRIMARY/SECONDARY/PERMISSIBLE roles", async () => {
+    const department = await createTestDepartment();
+    const primary = await createTestSubject({ departmentId: department.id });
+    const secondary = await createTestSubject();
+    const permissibleA = await createTestSubject({ departmentId: department.id });
+    const permissibleB = await createTestSubject({ departmentId: department.id });
+
+    const created = await callRoute<{ data: { id: string } }>(createTeacher, {
+      method: "POST",
+      url: "/api/teachers",
+      token: adminToken,
+      body: {
+        ...validTeacherBody(),
+        primarySubjectId: primary.id,
+        secondarySubjectId: secondary.id,
+        permissibleSubjectIds: [permissibleA.id, permissibleB.id],
+      },
+    });
+    expect(created.status).toBe(201);
+
+    const rows = await prisma.teacherSubject.findMany({
+      where: { teacherId: created.json.data.id },
+    });
+    expect(rows).toHaveLength(4);
+    expect(rows.find((r) => r.subjectId === primary.id)?.role).toBe("PRIMARY");
+    expect(rows.find((r) => r.subjectId === secondary.id)?.role).toBe("SECONDARY");
+    expect(rows.find((r) => r.subjectId === permissibleA.id)?.role).toBe("PERMISSIBLE");
+    expect(rows.find((r) => r.subjectId === permissibleB.id)?.role).toBe("PERMISSIBLE");
+  });
+
+  it("accepts a permissible subject that matches the secondary subject's department, not just the primary's", async () => {
+    const sciences = await createTestDepartment();
+    const languages = await createTestDepartment();
+    const primary = await createTestSubject({ departmentId: sciences.id }); // e.g. Physics
+    const secondary = await createTestSubject({ departmentId: languages.id }); // e.g. French
+    const permissibleViaSecondary = await createTestSubject({ departmentId: languages.id }); // e.g. Spanish
+
+    const created = await callRoute<{ data: { id: string } }>(createTeacher, {
+      method: "POST",
+      url: "/api/teachers",
+      token: adminToken,
+      body: {
+        ...validTeacherBody(),
+        primarySubjectId: primary.id,
+        secondarySubjectId: secondary.id,
+        permissibleSubjectIds: [permissibleViaSecondary.id],
+      },
+    });
+    expect(created.status).toBe(201);
+
+    const rows = await prisma.teacherSubject.findMany({
+      where: { teacherId: created.json.data.id },
+    });
+    expect(rows.find((r) => r.subjectId === permissibleViaSecondary.id)?.role).toBe(
+      "PERMISSIBLE"
+    );
+  });
+
+  it("rejects a permissible subject outside the primary subject's department, and more than 2 permissible subjects", async () => {
+    const department = await createTestDepartment();
+    const otherDepartment = await createTestDepartment();
+    const primary = await createTestSubject({ departmentId: department.id });
+    const outsideDept = await createTestSubject({ departmentId: otherDepartment.id });
+    const insideDept1 = await createTestSubject({ departmentId: department.id });
+    const insideDept2 = await createTestSubject({ departmentId: department.id });
+    const insideDept3 = await createTestSubject({ departmentId: department.id });
+
+    const wrongDept = await callRoute(createTeacher, {
+      method: "POST",
+      url: "/api/teachers",
+      token: adminToken,
+      body: {
+        ...validTeacherBody(),
+        primarySubjectId: primary.id,
+        permissibleSubjectIds: [outsideDept.id],
+      },
+    });
+    expect(wrongDept.status).toBe(400);
+
+    const tooMany = await callRoute(createTeacher, {
+      method: "POST",
+      url: "/api/teachers",
+      token: adminToken,
+      body: {
+        ...validTeacherBody(),
+        primarySubjectId: primary.id,
+        permissibleSubjectIds: [insideDept1.id, insideDept2.id, insideDept3.id],
+      },
+    });
+    expect(tooMany.status).toBe(400);
+  });
+
+  it("GET /api/teachers/[id]?include=relations returns subjects with their role, for edit-form preselection", async () => {
+    const department = await createTestDepartment();
+    const primary = await createTestSubject({ departmentId: department.id });
+    const permissible = await createTestSubject({ departmentId: department.id });
+
+    const created = await callRoute<{ data: { id: string } }>(createTeacher, {
+      method: "POST",
+      url: "/api/teachers",
+      token: adminToken,
+      body: {
+        ...validTeacherBody(),
+        primarySubjectId: primary.id,
+        permissibleSubjectIds: [permissible.id],
+      },
+    });
+
+    const fetched = await callRoute<{
+      data: { subjects: { subjectId: string; role: string }[] };
+    }>(getTeacher, {
+      url: `/api/teachers/${created.json.data.id}?include=relations`,
+      token: adminToken,
+      params: { id: created.json.data.id },
+    });
+    expect(fetched.status).toBe(200);
+    expect(fetched.json.data.subjects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ subjectId: primary.id, role: "PRIMARY" }),
+        expect.objectContaining({ subjectId: permissible.id, role: "PERMISSIBLE" }),
+      ])
+    );
   });
 
   it("GET /api/teachers/[id]/workload requires academicYearId and returns workload stats", async () => {

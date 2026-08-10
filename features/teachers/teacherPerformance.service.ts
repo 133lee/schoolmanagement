@@ -23,6 +23,7 @@ interface StudentSubjectPerformance {
     rank: number;
     total: number;
     trend: "up" | "down" | "same";
+    isAbsent?: boolean;
   }>;
 }
 
@@ -257,21 +258,34 @@ export const teacherPerformanceService = {
       for (const assessment of assessments) {
         const result = await prisma.studentAssessmentResult.findFirst({
           where: { studentId: student.id, assessmentId: assessment.id },
-          select: { marksObtained: true },
+          select: { marksObtained: true, isAbsent: true },
         });
         if (!result) continue;
 
-        const scorePercentage = calculatePercentage(result.marksObtained, assessment.totalMarks);
-
+        // Rank/total are computed over students who actually sat the
+        // assessment — an AB entry (marksObtained=0, isAbsent=true) must not
+        // be counted as a real score or drag down other students' ranking.
         const allResults = await prisma.studentAssessmentResult.findMany({
-          where: { assessmentId: assessment.id },
+          where: { assessmentId: assessment.id, isAbsent: false },
           select: { studentId: true, marksObtained: true },
           orderBy: { marksObtained: "desc" },
         });
-
-        const rank = allResults.findIndex((r) => r.studentId === student.id) + 1;
         const total = allResults.length;
 
+        if (result.isAbsent) {
+          studentAssessments.push({
+            type: assessment.examType,
+            score: 0,
+            rank: 0,
+            total,
+            trend: "same",
+            isAbsent: true,
+          });
+          continue;
+        }
+
+        const scorePercentage = calculatePercentage(result.marksObtained, assessment.totalMarks);
+        const rank = allResults.findIndex((r) => r.studentId === student.id) + 1;
         const trend = calculateTrend(scorePercentage, previousScore);
         previousScore = scorePercentage;
 

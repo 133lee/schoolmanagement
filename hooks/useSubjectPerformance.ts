@@ -7,6 +7,7 @@ interface AssessmentScore {
   rank: number;
   total: number;
   trend: "up" | "down" | "same";
+  isAbsent?: boolean;
 }
 
 interface StudentPerformance {

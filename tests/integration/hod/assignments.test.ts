@@ -103,6 +103,21 @@ describe("hod/assignments", () => {
       params: { id: assignmentId },
     });
     expect(deleted.status).toBe(204);
+
+    // Unassigning must actually remove it — not just report success while it
+    // lingers (this is the bug the HOD-panel "can't unassign" report traced back to).
+    const gotAfterDelete = await callRoute(getAssignment, {
+      url: `/api/hod/assignments/${assignmentId}`,
+      token: hodToken,
+      params: { id: assignmentId },
+    });
+    expect(gotAfterDelete.status).toBe(404);
+
+    const listAfterDelete = await callRoute<{ data: { data: { id: string }[] } }>(listAssignments, {
+      url: "/api/hod/assignments",
+      token: hodToken,
+    });
+    expect(listAfterDelete.json.data.data.map((a) => a.id)).not.toContain(assignmentId);
   });
 
   it("rejects creating an assignment for a subject outside the HOD's department", async () => {

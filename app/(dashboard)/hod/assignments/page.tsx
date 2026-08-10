@@ -473,6 +473,56 @@ export default function HodAssignmentsPage() {
     setCurrentAcademicYearId(yearId);
   };
 
+  // Unassign a teacher from a class-subject assignment
+  const handleUnassign = async (assignmentId: string) => {
+    const token = getAuthToken();
+
+    // Look up details before deleting so we can log a meaningful activity entry
+    const curriculumItem = curriculum.find(
+      (c) => c.currentAssignment?.id === assignmentId
+    );
+    const assignment = assignments.find((a) => a.id === assignmentId);
+    const teacher =
+      teachers.find((t) => t.id === (curriculumItem?.currentAssignment?.teacher.id ?? assignment?.teacherId)) ??
+      undefined;
+    const subject = subjects.find(
+      (s) => s.id === (curriculumItem?.subject.id ?? assignment?.subjectId)
+    );
+    const cls = classes.find(
+      (c) => c.id === (curriculumItem?.class.id ?? assignment?.classId)
+    );
+
+    const response = await fetch(`/api/hod/assignments/${assignmentId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Failed to unassign teacher");
+    }
+
+    // Refresh both assignments and curriculum
+    await Promise.all([
+      fetchAssignments(currentAcademicYearId),
+      fetchCurriculum(currentAcademicYearId),
+    ]);
+
+    if (teacher && subject && cls) {
+      setActivities((prev) => [
+        {
+          id: Date.now().toString(),
+          action: "unassigned",
+          teacherName: teacher.name,
+          className: formatClassLabel(cls.grade, cls.name),
+          subjectName: subject.name,
+          timestamp: new Date().toISOString(),
+        },
+        ...prev.slice(0, 19),
+      ]);
+    }
+  };
+
   // Curriculum-based assignment handler
   const handleCurriculumAssign = async (classSubjectId: string, teacherId: string) => {
     const token = getAuthToken();
@@ -618,6 +668,7 @@ export default function HodAssignmentsPage() {
       curriculum={curriculum}
       assignableTeachers={assignableTeachers}
       onCurriculumAssign={handleCurriculumAssign}
+      onCurriculumUnassign={handleUnassign}
       schoolTerms={schoolTerms}
     />
   );

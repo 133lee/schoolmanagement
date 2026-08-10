@@ -171,6 +171,63 @@ export class StudentService {
   }
 
   /**
+   * Parse a date string from CSV import into a Date.
+   *
+   * Deliberately does NOT hand the raw string to `new Date(string)` — that relies on
+   * the JS engine's non-ISO date heuristics, which silently misparses ambiguous
+   * strings (e.g. treats "05/03/2010" as month/day, and Excel re-saves a
+   * YYYY-MM-DD cell as the system locale's DD/MM/YYYY on export). Only two
+   * unambiguous formats are accepted; anything else is rejected with a clear error
+   * rather than risk importing a wrong date silently.
+   */
+  private parseDateString(
+    value: string,
+    fieldLabel: string,
+    rowNumber: number
+  ): Date {
+    const trimmed = value.trim();
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const dmyMatch = trimmed.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+
+    let year: number, month: number, day: number;
+    if (isoMatch) {
+      year = Number(isoMatch[1]);
+      month = Number(isoMatch[2]);
+      day = Number(isoMatch[3]);
+    } else if (dmyMatch) {
+      day = Number(dmyMatch[1]);
+      month = Number(dmyMatch[2]);
+      year = Number(dmyMatch[3]);
+    } else {
+      throw new ValidationError(
+        `Row ${rowNumber}: Invalid ${fieldLabel} "${value}". Use YYYY-MM-DD or DD/MM/YYYY format`
+      );
+    }
+
+    if (month < 1 || month > 12) {
+      throw new ValidationError(
+        `Row ${rowNumber}: Invalid ${fieldLabel} "${value}". Month must be between 01 and 12`
+      );
+    }
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    if (day < 1 || day > daysInMonth) {
+      throw new ValidationError(
+        `Row ${rowNumber}: Invalid ${fieldLabel} "${value}". Day ${day} is not valid for month ${month}`
+      );
+    }
+
+    const date = new Date(year, month - 1, day);
+    if (isNaN(date.getTime())) {
+      throw new ValidationError(
+        `Row ${rowNumber}: Invalid ${fieldLabel} "${value}". Use YYYY-MM-DD or DD/MM/YYYY format`
+      );
+    }
+
+    return date;
+  }
+
+  /**
    * Validate student number format (e.g., STU-2024-0001)
    * Format: STU-YYYY-NNNN (Year + 4-digit sequential)
    */
@@ -626,19 +683,16 @@ export class StudentService {
     const gender = genderUpper as Gender;
 
     // Parse dates
-    const dateOfBirth = new Date(row.dateOfBirth.trim());
-    if (isNaN(dateOfBirth.getTime())) {
-      throw new ValidationError(
-        `Row ${rowNumber}: Invalid date of birth "${row.dateOfBirth}". Use YYYY-MM-DD format`
-      );
-    }
-
-    const admissionDate = new Date(row.admissionDate.trim());
-    if (isNaN(admissionDate.getTime())) {
-      throw new ValidationError(
-        `Row ${rowNumber}: Invalid admission date "${row.admissionDate}". Use YYYY-MM-DD format`
-      );
-    }
+    const dateOfBirth = this.parseDateString(
+      row.dateOfBirth,
+      "date of birth",
+      rowNumber
+    );
+    const admissionDate = this.parseDateString(
+      row.admissionDate,
+      "admission date",
+      rowNumber
+    );
 
     // Parse status (optional)
     let status: StudentStatus | undefined;

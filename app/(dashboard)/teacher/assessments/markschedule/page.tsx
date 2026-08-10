@@ -50,7 +50,11 @@ interface StudentRow {
   gender: "M" | "F"; // service pre-converts MALE→M, FEMALE→F
 }
 
-type ResultsMap = Record<string, Record<string, number | null>>;
+interface ResultCell {
+  marks: number | null;
+  isAbsent: boolean;
+}
+type ResultsMap = Record<string, Record<string, ResultCell>>;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -133,8 +137,8 @@ async function downloadPDF(data: PDFData) {
   // ── Sort: best total score first (nulls treated as 0) ────────────────────
   function totalScore(studentId: string): number {
     return data.assessmentIds.reduce((sum, aid) => {
-      const m = data.resultsMap[studentId]?.[aid];
-      return sum + (m != null ? Number(m) : 0);
+      const cell = data.resultsMap[studentId]?.[aid];
+      return sum + (cell && !cell.isAbsent && cell.marks != null ? Number(cell.marks) : 0);
     }, 0);
   }
   const sortedStudents = [...data.students].sort(
@@ -273,20 +277,24 @@ async function downloadPDF(data: PDFData) {
               <Text style={[styles.tdCenter, { width: SNO_W }]}>{idx + 1}</Text>
               <Text style={[styles.td, { width: NAME_W }]}>{fmtName(student.name)}</Text>
               <Text style={[styles.tdCenter, { width: SEX_W }]}>{sexLabel(student.gender)}</Text>
-              {data.assessmentIds.map((aid, i) => (
-                <Text
-                  key={aid}
-                  style={[
-                    styles.tdCenter,
-                    { width: colW, borderRightWidth: i === data.columns.length - 1 ? 0 : 0.5 },
-                  ]}
-                >
-                  {data.resultsMap[student.id]?.[aid] !== null &&
-                  data.resultsMap[student.id]?.[aid] !== undefined
-                    ? String(data.resultsMap[student.id][aid])
-                    : ""}
-                </Text>
-              ))}
+              {data.assessmentIds.map((aid, i) => {
+                const cell = data.resultsMap[student.id]?.[aid];
+                return (
+                  <Text
+                    key={aid}
+                    style={[
+                      styles.tdCenter,
+                      { width: colW, borderRightWidth: i === data.columns.length - 1 ? 0 : 0.5 },
+                    ]}
+                  >
+                    {cell?.isAbsent
+                      ? "AB"
+                      : cell?.marks !== null && cell?.marks !== undefined
+                      ? String(cell.marks)
+                      : ""}
+                  </Text>
+                );
+              })}
             </View>
           ))}
 
@@ -545,12 +553,17 @@ export default function MarkSchedulePage() {
       const map: ResultsMap = {};
       for (const student of studentList) {
         map[student.id] = {};
-        for (const a of assessmentList) map[student.id][a.id] = null;
+        for (const a of assessmentList) map[student.id][a.id] = { marks: null, isAbsent: false };
       }
       for (const chunk of resultChunks) {
         for (const r of chunk.results) {
           const sid = r.student?.id ?? r.studentId;
-          if (map[sid]) map[sid][chunk.assessmentId] = r.marksObtained ?? null;
+          if (map[sid]) {
+            map[sid][chunk.assessmentId] = {
+              marks: r.marksObtained ?? null,
+              isAbsent: r.isAbsent ?? false,
+            };
+          }
         }
       }
 
@@ -611,8 +624,13 @@ export default function MarkSchedulePage() {
         assessmentIds: columns.map((a) => a.id),
         logoBase64,
       });
-    } catch {
-      toast({ title: "Failed to generate PDF", variant: "destructive" });
+    } catch (error) {
+      console.error("Mark schedule PDF generation failed:", error);
+      toast({
+        title: "Failed to generate PDF",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      });
     } finally {
       setDownloadingPDF(false);
     }
@@ -836,13 +854,17 @@ export default function MarkSchedulePage() {
                       {sexLabel(student.gender)}
                     </td>
                     {columns.map((a) => {
-                      const marks = resultsMap[student.id]?.[a.id];
+                      const cell = resultsMap[student.id]?.[a.id];
                       return (
                         <td
                           key={a.id}
                           className="border border-border px-2 py-1.5 text-center tabular-nums"
                         >
-                          {marks !== null && marks !== undefined ? marks : ""}
+                          {cell?.isAbsent
+                            ? "AB"
+                            : cell?.marks !== null && cell?.marks !== undefined
+                            ? cell.marks
+                            : ""}
                         </td>
                       );
                     })}

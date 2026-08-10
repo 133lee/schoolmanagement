@@ -1,6 +1,13 @@
 import { Prisma } from "@prisma/client";
-import { TeacherProfile, StaffStatus, Gender, QualificationLevel } from "@/types/prisma-enums";
+import {
+  TeacherProfile,
+  StaffStatus,
+  Gender,
+  QualificationLevel,
+  TeacherSubjectRole,
+} from "@/types/prisma-enums";
 import { teacherRepository } from "./teacher.repository";
+import { subjectRepository } from "../subjects/subject.repository";
 import prisma from "@/lib/db/prisma";
 import bcrypt from "bcryptjs";
 import { UnauthorizedError, NotFoundError, ValidationError } from "@/lib/errors";
@@ -37,6 +44,8 @@ export interface CreateTeacherInput {
   hireDate: Date;
   primarySubjectId: string;
   secondarySubjectId?: string;
+  /** Up to MAX_PERMISSIBLE_SUBJECTS more subjects, beyond primary/secondary, that the teacher is permitted to teach. Must belong to the primary subject's department. */
+  permissibleSubjectIds?: string[];
 }
 
 export interface UpdateTeacherInput {
@@ -52,6 +61,7 @@ export interface UpdateTeacherInput {
   departmentId?: string;
   primarySubjectId?: string;
   secondarySubjectId?: string;
+  permissibleSubjectIds?: string[];
 }
 
 export interface TeacherFilters {
@@ -65,6 +75,12 @@ export interface PaginationParams {
   page: number;
   pageSize: number;
 }
+
+// Primary/secondary subjects have no department restriction, but subjects a
+// teacher is merely *permitted* (not necessarily qualified) to teach beyond
+// those are capped and must stay within the primary subject's department —
+// otherwise any teacher could be assigned to teach any subject school-wide.
+const MAX_PERMISSIBLE_SUBJECTS = 2;
 
 export class TeacherService {
   // ==================== PERMISSION CHECKS ====================
@@ -222,6 +238,94 @@ export class TeacherService {
     }
   }
 
+  /**
+   * Validate the "permissible" subjects a teacher may teach beyond their
+   * primary/secondary subjects. Caps the count, forbids overlap with
+   * primary/secondary or duplicates among themselves, and requires each one
+   * to belong to the same department as EITHER the primary OR the secondary
+   * subject — a teacher with subjects spanning two departments (e.g. Physics
+   * primary, French secondary) can pick permissible subjects from either one,
+   * not just the primary's.
+   */
+  private async validatePermissibleSubjects(
+    primarySubjectId: string,
+    secondarySubjectId: string | undefined,
+    permissibleSubjectIds: string[]
+  ): Promise<void> {
+    if (permissibleSubjectIds.length > MAX_PERMISSIBLE_SUBJECTS) {
+      throw new ValidationError(
+        `A teacher can have at most ${MAX_PERMISSIBLE_SUBJECTS} permissible subjects beyond primary/secondary`
+      );
+    }
+
+    const reserved = [primarySubjectId, secondarySubjectId].filter(
+      (id): id is string => Boolean(id)
+    );
+    if (permissibleSubjectIds.some((id) => reserved.includes(id))) {
+      throw new ValidationError(
+        "Permissible subjects must be different from the primary and secondary subjects"
+      );
+    }
+
+    if (new Set(permissibleSubjectIds).size !== permissibleSubjectIds.length) {
+      throw new ValidationError("Permissible subjects must not repeat");
+    }
+
+    if (permissibleSubjectIds.length === 0) return;
+
+    const primarySubject = await subjectRepository.findById(primarySubjectId);
+    if (!primarySubject) {
+      throw new NotFoundError("Primary subject not found");
+    }
+
+    const secondarySubject = secondarySubjectId
+      ? await subjectRepository.findById(secondarySubjectId)
+      : null;
+
+    const allowedDepartmentIds = new Set(
+      [primarySubject.departmentId, secondarySubject?.departmentId].filter(
+        (id): id is string => Boolean(id)
+      )
+    );
+
+    const permissibleSubjects = await Promise.all(
+      permissibleSubjectIds.map((id) => subjectRepository.findById(id))
+    );
+
+    permissibleSubjects.forEach((subject, index) => {
+      if (!subject) {
+        throw new NotFoundError(`Permissible subject ${permissibleSubjectIds[index]} not found`);
+      }
+      if (!subject.departmentId || !allowedDepartmentIds.has(subject.departmentId)) {
+        throw new ValidationError(
+          `${subject.name} is not in the same department as the teacher's primary subject (${primarySubject.name})` +
+            (secondarySubject ? ` or secondary subject (${secondarySubject.name})` : "")
+        );
+      }
+    });
+  }
+
+  /**
+   * Tag each subject with its role so the resulting TeacherSubject rows can
+   * later be told apart (e.g. to preselect them correctly on an edit form).
+   */
+  private buildSubjectRoleAssignments(
+    primarySubjectId: string,
+    secondarySubjectId: string | undefined,
+    permissibleSubjectIds: string[]
+  ): Array<{ subjectId: string; role: TeacherSubjectRole }> {
+    const assignments: Array<{ subjectId: string; role: TeacherSubjectRole }> = [
+      { subjectId: primarySubjectId, role: TeacherSubjectRole.PRIMARY },
+    ];
+    if (secondarySubjectId) {
+      assignments.push({ subjectId: secondarySubjectId, role: TeacherSubjectRole.SECONDARY });
+    }
+    permissibleSubjectIds.forEach((subjectId) => {
+      assignments.push({ subjectId, role: TeacherSubjectRole.PERMISSIBLE });
+    });
+    return assignments;
+  }
+
   // ==================== PUBLIC API ====================
 
   /**
@@ -289,11 +393,20 @@ export class TeacherService {
     ).catch((err) => console.error("Account creation SMS failed:", err));
 
     // Assign subjects to the teacher
-    const subjectIds: string[] = [input.primarySubjectId];
-    if (input.secondarySubjectId) {
-      subjectIds.push(input.secondarySubjectId);
-    }
-    await teacherRepository.assignSubjects(teacher.id, subjectIds);
+    const permissibleSubjectIds = input.permissibleSubjectIds ?? [];
+    await this.validatePermissibleSubjects(
+      input.primarySubjectId,
+      input.secondarySubjectId,
+      permissibleSubjectIds
+    );
+    await teacherRepository.assignSubjects(
+      teacher.id,
+      this.buildSubjectRoleAssignments(
+        input.primarySubjectId,
+        input.secondarySubjectId,
+        permissibleSubjectIds
+      )
+    );
 
     return teacher;
   }
@@ -536,11 +649,20 @@ export class TeacherService {
 
     // Update subjects if provided
     if (input.primarySubjectId) {
-      const subjectIds: string[] = [input.primarySubjectId];
-      if (input.secondarySubjectId) {
-        subjectIds.push(input.secondarySubjectId);
-      }
-      await teacherRepository.assignSubjects(id, subjectIds);
+      const permissibleSubjectIds = input.permissibleSubjectIds ?? [];
+      await this.validatePermissibleSubjects(
+        input.primarySubjectId,
+        input.secondarySubjectId,
+        permissibleSubjectIds
+      );
+      await teacherRepository.assignSubjects(
+        id,
+        this.buildSubjectRoleAssignments(
+          input.primarySubjectId,
+          input.secondarySubjectId,
+          permissibleSubjectIds
+        )
+      );
     }
 
     return teacher;

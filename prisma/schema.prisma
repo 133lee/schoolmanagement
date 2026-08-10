@@ -323,13 +323,26 @@ model TeacherProfile {
   @@map("teacher_profiles")
 }
 
+enum TeacherSubjectRole {
+  PRIMARY
+  SECONDARY
+  PERMISSIBLE
+}
+
 model TeacherSubject {
-  id        String         @id @default(cuid())
+  id        String             @id @default(cuid())
   teacherId String
   subjectId String
-  createdAt DateTime       @default(now())
-  subject   Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  // Distinguishes the teacher's main qualified subject, an optional second
+  // qualified subject, and up to 2 department-scoped subjects they're merely
+  // permitted (not necessarily qualified) to teach. Needed so an edit form
+  // can reliably tell which existing row is which — without this, editing a
+  // teacher had no way to know which of their subjects to preselect as
+  // "primary" vs "secondary" and risked overwriting them with the wrong ones.
+  role      TeacherSubjectRole @default(PERMISSIBLE)
+  createdAt DateTime           @default(now())
+  subject   Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher   TeacherProfile     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@unique([teacherId, subjectId])
   @@index([teacherId])

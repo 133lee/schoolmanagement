@@ -67,6 +67,7 @@ interface AssignmentsDashboardProps {
   curriculum?: CurriculumItem[];
   assignableTeachers?: AssignableTeacher[];
   onCurriculumAssign?: (classSubjectId: string, teacherId: string) => Promise<void>;
+  onCurriculumUnassign?: (assignmentId: string) => Promise<void>;
   schoolTerms?: SchoolTerm[];
 }
 
@@ -85,6 +86,7 @@ export function AssignmentsDashboard({
   curriculum = [],
   assignableTeachers = [],
   onCurriculumAssign,
+  onCurriculumUnassign,
   schoolTerms = [],
 }: AssignmentsDashboardProps) {
   const { toast } = useToast();
@@ -155,6 +157,34 @@ export function AssignmentsDashboard({
       throw error;
     } finally {
       setIsCurriculumAssigning(false);
+    }
+  };
+
+  // Handler for curriculum-based unassignment
+  const handleCurriculumUnassign = async (assignmentId: string) => {
+    if (!onCurriculumUnassign) return;
+
+    const curriculumItem = curriculum.find(
+      (c) => c.currentAssignment?.id === assignmentId
+    );
+
+    try {
+      await onCurriculumUnassign(assignmentId);
+
+      toast({
+        title: "Teacher Unassigned",
+        description: curriculumItem?.currentAssignment
+          ? `${curriculumItem.currentAssignment.teacher.name} removed from ${curriculumItem.subject.name} for ${formatClassLabel(curriculumItem.class.grade.name, curriculumItem.class.name)}`
+          : "The assignment has been removed.",
+      });
+    } catch (error) {
+      console.error("Curriculum unassignment failed:", error);
+      toast({
+        title: "Unassign Failed",
+        description: error instanceof Error ? error.message : "Failed to unassign teacher",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
@@ -322,6 +352,9 @@ export function AssignmentsDashboard({
                     teachers={teachers}
                     assignments={assignments}
                     onAssign={handleAssign}
+                    onUnassign={
+                      onCurriculumUnassign ? handleCurriculumUnassign : undefined
+                    }
                     isLoading={isLoading}
                   />
                 </TabsContent>
@@ -414,6 +447,7 @@ export function AssignmentsDashboard({
             curriculum={curriculum}
             teachers={assignableTeachers}
             onAssign={handleCurriculumAssign}
+            onUnassign={onCurriculumUnassign ? handleCurriculumUnassign : undefined}
             isLoading={isCurriculumAssigning}
           />
         )}
