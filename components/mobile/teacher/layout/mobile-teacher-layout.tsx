@@ -2,10 +2,13 @@
 
 import { useState, useRef } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { User } from "lucide-react";
 import { BottomNav } from "./bottom-nav";
 import { MobileDrawer } from "./mobile-drawer";
 import { NotificationBell } from "@/components/teacher/notification-bell";
 import { NotificationsDrawer } from "@/components/teacher/notifications-drawer";
+import { Button } from "@/components/ui/button";
 
 // ── Page title map ─────────────────────────────────────────────────────────────
 const PAGE_TITLES: Record<string, string> = {
@@ -56,7 +59,7 @@ export function MobileTeacherLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col h-dvh overflow-hidden bg-background">
       <MobileDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -66,21 +69,35 @@ export function MobileTeacherLayout({
       {/* ── Sticky top app bar ───────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-background px-4 shrink-0">
         <h1 className="text-base font-semibold">{getPageTitle(pathname)}</h1>
-        <NotificationBell
-          ref={notificationBellRef}
-          onBellClick={() => setNotificationsOpen(true)}
-        />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" asChild>
+            <Link href="/teacher/profile">
+              <User className="h-[18px] w-[18px]" />
+              <span className="sr-only">My Profile</span>
+            </Link>
+          </Button>
+          <NotificationBell
+            ref={notificationBellRef}
+            onBellClick={() => setNotificationsOpen(true)}
+          />
+        </div>
       </header>
 
       {/* ── Page content ─────────────────────────────────────────────────────── */}
+      {/* pb-28 clears the floating bottom nav (h-16 pill + its own bottom
+          offset + breathing room) so the last bit of content never sits
+          underneath it, unreachable. */}
       <main
         key={pathname}
-        className="flex-1 overflow-y-auto pb-16 animate-in fade-in slide-in-from-right-4 duration-250"
+        className="flex-1 overflow-y-auto pb-28 animate-in fade-in slide-in-from-right-4 duration-250"
       >
         {children}
       </main>
 
-      <BottomNav onMenuOpen={() => setDrawerOpen(true)} />
+      <BottomNav
+        onMenuOpen={() => setDrawerOpen(true)}
+        menuOpen={drawerOpen}
+      />
 
       {/* ── Notifications drawer ─────────────────────────────────────────────── */}
       <NotificationsDrawer

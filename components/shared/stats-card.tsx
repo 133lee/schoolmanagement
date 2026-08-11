@@ -38,10 +38,10 @@ export function StatsCard({
             <Icon className="h-3.5 w-3.5" />
           </div>
         </div>
-        {/* Row 2: value ←→ subtitle */}
-        <div className="flex items-baseline justify-between mt-2.5">
+        {/* Row 2: value only — subtitle detail is desktop-only, it doesn't
+            fit cleanly next to the value in a narrow 2-column mobile grid */}
+        <div className="mt-2.5">
           <p className="text-xl font-bold text-foreground">{value}</p>
-          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
 

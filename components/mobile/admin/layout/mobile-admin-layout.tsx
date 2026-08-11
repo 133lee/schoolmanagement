@@ -79,7 +79,7 @@ function MobileAdminLayoutChrome({ children, user }: MobileAdminLayoutProps) {
   const refresh = useMobileHeaderRefreshState();
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col h-dvh overflow-hidden bg-background">
       <MobileAdminDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -112,12 +112,12 @@ function MobileAdminLayoutChrome({ children, user }: MobileAdminLayoutProps) {
       {/* ── Page content ────────────────────────────────────────────────────── */}
       <main
         key={pathname}
-        className="flex-1 overflow-y-auto pb-16 animate-in fade-in slide-in-from-right-4 duration-250"
+        className="flex-1 overflow-y-auto pb-28 animate-in fade-in slide-in-from-right-4 duration-250"
       >
         {children}
       </main>
 
-      <AdminBottomNav onMenuOpen={() => setDrawerOpen(true)} />
+      <AdminBottomNav onMenuOpen={() => setDrawerOpen(true)} menuOpen={drawerOpen} />
 
       {/* ── Notifications drawer ─────────────────────────────────────────────── */}
       <NotificationsDrawer
