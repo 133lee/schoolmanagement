@@ -33,6 +33,7 @@ import {
 
 interface ClassRanking {
   subject: string;
+  subjectCode: string;
   score: number;
   rank: number;
   total: number;
@@ -331,6 +332,7 @@ export async function getStudentClassRankings(
         select: {
           id: true,
           name: true,
+          code: true,
         },
       },
       results: {
@@ -400,6 +402,7 @@ export async function getStudentClassRankings(
 
     rankings.push({
       subject: assessment.subject.name,
+      subjectCode: assessment.subject.code,
       score: currentPercentage,
       rank: rankingInfo.rank,
       total: rankingInfo.total,

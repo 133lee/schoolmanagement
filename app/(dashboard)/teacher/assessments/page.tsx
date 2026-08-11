@@ -792,16 +792,16 @@ export default function TeacherAssessmentsPage() {
                 <TabsContent value="subject-teacher" className="m-0 p-3 lg:p-4">
                   {loading ? (
                     <div className="space-y-1.5">
-                      {[...Array(6)].map((_, i) => (
-                        <div key={i} className="p-2.5 rounded-lg border animate-pulse">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="p-2.5 rounded-lg border">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 space-y-2">
-                              <div className="h-4 bg-muted rounded w-3/4" />
-                              <div className="h-3 bg-muted rounded w-1/2" />
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-1/2" />
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                              <div className="h-5 bg-muted rounded w-20" />
-                              <div className="h-3 bg-muted rounded w-16" />
+                              <Skeleton className="h-5 w-20" />
+                              <Skeleton className="h-3 w-16" />
                             </div>
                           </div>
                         </div>

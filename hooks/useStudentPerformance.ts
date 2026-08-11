@@ -8,6 +8,7 @@ interface SubjectScore {
 
 interface ClassRanking {
   subject: string;
+  subjectCode: string;
   score: number;
   rank: number;
   total: number;

@@ -450,24 +450,44 @@ export default function EnterResultsPage() {
           <Skeleton className="h-8 w-24" />
         </div>
         <div className="border rounded-lg overflow-hidden">
-          <div className="flex gap-3 px-4 py-2.5 bg-muted/50 border-b">
-            <Skeleton className="h-4 w-6" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-4 w-16 ml-auto" />
+          {/* Column headers — desktop */}
+          <div className="hidden lg:grid grid-cols-12 gap-3 px-4 py-2.5 bg-muted/50 border-b">
+            <Skeleton className="col-span-1 h-3 w-6" />
+            <Skeleton className="col-span-4 h-3 w-16" />
+            <Skeleton className="col-span-3 h-3 w-14" />
+            <Skeleton className="col-span-2 h-3 w-8" />
+            <Skeleton className="col-span-2 h-3 w-16 ml-auto" />
           </div>
+          {/* Column headers — mobile */}
+          <div className="lg:hidden flex items-center gap-3 px-4 py-2.5 bg-muted/50 border-b">
+            <Skeleton className="h-3 w-16 flex-1" />
+            <Skeleton className="h-3 w-10 shrink-0" />
+            <Skeleton className="h-3 w-10 shrink-0" />
+          </div>
+
           <div className="divide-y">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="grid grid-cols-12 gap-3 px-4 py-3 items-center">
-                <Skeleton className="col-span-1 h-4 w-6" />
-                <div className="col-span-4 space-y-1">
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="h-3 w-20" />
+              <div key={i}>
+                {/* Mobile row */}
+                <div className="lg:hidden flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-9 w-16 rounded-md shrink-0" />
+                  <div className="flex items-center gap-1.5 shrink-0 w-[60px] justify-end">
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                  </div>
                 </div>
-                <Skeleton className="col-span-3 h-8 w-24" />
-                <Skeleton className="col-span-2 h-4 w-12" />
-                <Skeleton className="col-span-2 h-5 w-12 ml-auto" />
+                {/* Desktop row */}
+                <div className="hidden lg:grid grid-cols-12 gap-3 px-4 py-3 items-center">
+                  <Skeleton className="col-span-1 h-4 w-6" />
+                  <Skeleton className="col-span-4 h-4 w-36" />
+                  <Skeleton className="col-span-3 h-8 w-24" />
+                  <Skeleton className="col-span-2 h-4 w-12" />
+                  <Skeleton className="col-span-2 h-5 w-12 ml-auto" />
+                </div>
               </div>
             ))}
           </div>

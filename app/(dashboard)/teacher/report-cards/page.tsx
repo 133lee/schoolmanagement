@@ -345,16 +345,41 @@ export default function TeacherReportCardsPage() {
           )}
 
           {loading ? (
-            <div className="space-y-3 pt-2">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-16 ml-auto" />
-                </div>
-              ))}
-            </div>
+            <>
+              {/* Mobile — mirrors ReportCardsTable's tappable card rows */}
+              <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3">
+                    <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-14 rounded-full shrink-0" />
+                    <Skeleton className="h-4 w-4 shrink-0" />
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop — mirrors ReportCardsTable's 8-column table */}
+              <div className="hidden lg:block rounded-md border divide-y">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 px-4 py-3">
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-8 w-8 rounded-md" />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : filteredReportCards.length === 0 ? (
             <Empty className="h-96">
               <EmptyContent>

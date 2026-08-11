@@ -23,7 +23,6 @@ import {
   Download,
   Search,
   ChevronRight,
-  ChevronDown,
   ChevronLeft,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,7 +72,6 @@ interface StudentData {
 export default function TeacherClassesPage() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-  const [chartCollapsed, setChartCollapsed] = useState(false);
   const [studentPage, setStudentPage] = useState(1);
   const [sheetSearchQuery, setSheetSearchQuery] = useState("");
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
@@ -281,10 +279,9 @@ export default function TeacherClassesPage() {
   // ── Pagination ───────────────────────────────────────────────────────────────
   const STUDENTS_PER_PAGE = 15;
 
-  // Reset page + collapse + search when class changes
+  // Reset page + search when class changes
   useEffect(() => {
     setStudentPage(1);
-    setChartCollapsed(false);
     setSheetSearchQuery("");
   }, [selectedClassId]);
 
@@ -310,6 +307,31 @@ export default function TeacherClassesPage() {
     (acc, s) => { if (s.gender === "M") acc.boys++; else acc.girls++; return acc; },
     { boys: 0, girls: 0 }
   );
+
+  // ── Skeleton rows — mirror the mobile card row and desktop table row shapes ───
+  const renderSkeletonRows = () =>
+    Array.from({ length: 5 }).map((_, i) => (
+      <div key={i} className={cn("border-b", i % 2 === 0 ? "bg-background" : "bg-muted/30")}>
+        {/* Mobile shape: name + subtitle line on the left, chevron on the right */}
+        <div className="lg:hidden flex items-center justify-between gap-3 px-4 py-3.5">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <Skeleton className="h-4 w-4 rounded-full shrink-0" />
+        </div>
+        {/* Desktop shape: Class / Subject / Status / Action columns */}
+        <div className="hidden lg:flex items-center gap-4 px-2 py-3">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+          <div className="ml-auto flex gap-1">
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <Skeleton className="h-8 w-8 rounded-md" />
+          </div>
+        </div>
+      </div>
+    ));
 
   // ── Shared row renderer helpers ──────────────────────────────────────────────
   const renderClassRows = (classes: ClassData[], mode: "class" | "subject") =>
@@ -446,16 +468,7 @@ export default function TeacherClassesPage() {
                   <ScrollArea className="h-full">
                     <div className="pt-4">
                       {loading ? (
-                        <div className="space-y-3 pt-4 px-4 lg:px-2">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <div key={i} className="flex items-center gap-4">
-                              <Skeleton className="h-4 w-28" />
-                              <Skeleton className="h-4 w-32" />
-                              <Skeleton className="h-4 w-20" />
-                              <Skeleton className="h-4 w-16 ml-auto" />
-                            </div>
-                          ))}
-                        </div>
+                        <div>{renderSkeletonRows()}</div>
                       ) : (
                         <>
                           <table className="w-full">
@@ -478,13 +491,13 @@ export default function TeacherClassesPage() {
                             </div>
                           )}
 
-                          {/* Chart — desktop only (mobile shows in detail sheet) */}
+                          {/* Chart — shown on every screen size, beneath the class list */}
                           {classTeacherClasses.length > 0 && (() => {
                             const chartClass =
                               classTeacherClasses.find((c) => c.id === selectedClassId) ||
                               classTeacherClasses[0];
                             return (
-                              <div className="hidden lg:block">
+                              <div className="px-4 lg:px-0">
                                 <AttendanceTrendChart
                                   key={`${chartRefreshKey}-${chartClass.id}`}
                                   classId={chartClass.id}
@@ -504,16 +517,7 @@ export default function TeacherClassesPage() {
                   <ScrollArea className="h-full">
                     <div className="pt-4">
                       {loading ? (
-                        <div className="space-y-3 pt-4 px-4 lg:px-2">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <div key={i} className="flex items-center gap-4">
-                              <Skeleton className="h-4 w-28" />
-                              <Skeleton className="h-4 w-32" />
-                              <Skeleton className="h-4 w-20" />
-                              <Skeleton className="h-4 w-16 ml-auto" />
-                            </div>
-                          ))}
-                        </div>
+                        <div>{renderSkeletonRows()}</div>
                       ) : (
                         <>
                           <table className="w-full">
@@ -685,34 +689,6 @@ export default function TeacherClassesPage() {
 
               {/* Scrollable body */}
               <div className="flex-1 overflow-y-auto">
-
-                {/* ── Attendance trend chart — class teacher only, collapsible ── */}
-                {isClassTeacher && (
-                  <div>
-                    {/* Collapse toggle */}
-                    <button
-                      onClick={() => setChartCollapsed((v) => !v)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 border-b bg-muted/30 hover:bg-muted/50 transition-colors"
-                    >
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        Attendance Trend
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                          chartCollapsed && "-rotate-90"
-                        )}
-                      />
-                    </button>
-                    {!chartCollapsed && (
-                      <AttendanceTrendChart
-                        key={`mobile-${chartRefreshKey}-${selectedClassId}`}
-                        classId={selectedClass.id}
-                        className={selectedClass.name}
-                      />
-                    )}
-                  </div>
-                )}
 
                 {/* ── Search field ── */}
                 <div className="px-4 pt-3 pb-1">

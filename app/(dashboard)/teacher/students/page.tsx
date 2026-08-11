@@ -260,7 +260,7 @@ export default function TeacherStudentsPage() {
           setSelectedSubjectId(null);
         }}
         className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+        <TabsList className="grid w-full mt-6 grid-cols-2 bg-muted/50">
           <TabsTrigger
             value="class-teacher"
             className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
@@ -792,20 +792,17 @@ export default function TeacherStudentsPage() {
                     </div>
                   </Card>
                 ) : subjectPerformanceLoading ? (
-                  <Card className="p-6 min-h-[400px]">
-                    <div className="space-y-3">
-                      {Array.from({ length: 8 }).map((_, i) => {
-                        const ws = ["w-32","w-28","w-40","w-24","w-36","w-28","w-32","w-24"];
-                        return (
-                          <div key={i} className="flex items-center gap-4">
-                            <Skeleton className={`h-4 ${ws[i]}`} />
-                            <Skeleton className="h-4 w-20" />
-                            <Skeleton className="h-4 w-16 ml-auto" />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <StudentSubjectPerformance
+                        key={i}
+                        studentName=""
+                        subjectName=""
+                        assessments={[]}
+                        loading
+                      />
+                    ))}
+                  </div>
                 ) : subjectPerformanceError ? (
                   <Card className="p-8">
                     <div className="flex flex-col items-center gap-3 text-center">

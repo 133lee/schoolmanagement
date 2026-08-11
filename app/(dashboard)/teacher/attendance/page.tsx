@@ -589,9 +589,22 @@ export default function AttendancePage() {
 
         <CardContent className="flex flex-col flex-1 min-h-0 p-0 overflow-hidden">
           {studentsLoading ? (
-            <div className="p-6 space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-12 rounded-lg" />
+            <div className="divide-y">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="px-4 py-3 lg:px-6">
+                  <div className="grid grid-cols-[2rem_1fr_auto] gap-x-3 items-center lg:gap-x-4">
+                    <Skeleton className="h-3 w-4" />
+                    <div className="flex items-center gap-2 lg:gap-5">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-5 w-5 rounded-full" />
+                    </div>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4].map((j) => (
+                        <Skeleton key={j} className="h-8 w-8 rounded-md" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           ) : students.length === 0 ? (

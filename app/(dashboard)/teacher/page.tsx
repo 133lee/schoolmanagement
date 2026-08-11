@@ -75,9 +75,9 @@ const JS_DAY_TO_KEY: Record<number, string> = {
 };
 
 const TERM_LABELS: Record<string, string> = {
-  FIRST_TERM: "Term 1",
-  SECOND_TERM: "Term 2",
-  THIRD_TERM: "Term 3",
+  TERM_1: "Term 1",
+  TERM_2: "Term 2",
+  TERM_3: "Term 3",
 };
 
 function fmtTime(t: string): string {
@@ -313,10 +313,10 @@ export default function TeacherDashboard() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 px-4 pb-10 lg:px-0 lg:space-y-6">
+    <div className="space-y-4 px-4 pt-6 pb-10 lg:px-0 lg:space-y-6">
       {/* ── Welcome header ─────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between pt-1 gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 pb-2">
           <h1 className="text-xl lg:text-2xl font-bold tracking-tight truncate">
             {loading ? "Dashboard" : `Welcome back, ${firstName}`}
           </h1>
@@ -325,9 +325,8 @@ export default function TeacherDashboard() {
         {termLabel && (
           <Badge
             variant="secondary"
-            className="text-xs lg:text-sm px-2 lg:px-3 py-1 lg:py-1.5 font-medium gap-1 lg:gap-1.5 mt-0.5 shrink-0"
+            className="text-xs lg:text-sm px-2.5 lg:px-3 py-1 lg:py-1.5 font-medium mt-0.5 shrink-0"
           >
-            <Calendar className="h-3 lg:h-3.5 w-3 lg:w-3.5" />
             <span className="hidden sm:inline">{termLabel}</span>
             <span className="sm:hidden">{termLabel.split(" · ")[0]}</span>
           </Badge>
@@ -374,7 +373,7 @@ export default function TeacherDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ── Today's Schedule (2/3 width) ─────────────────────────────────── */}
         <Card className="lg:col-span-2">
-          <CardHeader className="pb-3 flex-row items-center justify-between space-y-0 px-4 lg:px-6">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 px-4 lg:px-6">
             <CardTitle className="text-sm lg:text-base font-semibold">
               Today&apos;s Schedule
             </CardTitle>
@@ -424,7 +423,7 @@ export default function TeacherDashboard() {
         <div className="space-y-5">
           {/* Assessment Overview */}
           <Card>
-            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm lg:text-base font-semibold">
                 Assessments
               </CardTitle>
