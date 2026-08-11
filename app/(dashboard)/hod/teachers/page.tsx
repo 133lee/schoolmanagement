@@ -35,6 +35,8 @@ import { TeacherSheet } from "@/components/teachers/teacher-sheet";
 import { useHodTeachers } from "@/hooks/useHodTeachers";
 import { StaffStatus, Gender, QualificationLevel } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
+import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { cn } from "@/lib/utils";
 
 export default function HodTeachersPage() {
   const { toast } = useToast();
@@ -48,6 +50,12 @@ export default function HodTeachersPage() {
   >("all");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetTeacherId, setSheetTeacherId] = useState<string | null>(null);
+
+  // Mobile-only: which of the first-row filters is currently focused/open,
+  // so it can grow while the other two shrink out of its way.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "status" | "gender" | null
+  >(null);
 
   // Use the HOD teachers hook with filters and pagination (department-scoped)
   const { teachers, meta, isLoading, error, refetch } = useHodTeachers(
@@ -68,6 +76,10 @@ export default function HodTeachersPage() {
       description: "Teacher list has been refreshed",
     });
   };
+
+  // On mobile, the refresh action lives as an icon next to the notification
+  // bell in the layout's header instead of the inline "Refresh" button below.
+  useMobileHeaderRefresh(handleRefresh, isLoading);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= meta.totalPages) {
@@ -114,9 +126,9 @@ export default function HodTeachersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between mt-2">
+    <div className="space-y-6 px-4 lg:px-0">
+      {/* Page Header — desktop only; mobile top bar handles the title + refresh */}
+      <div className="hidden lg:flex items-start justify-between mt-2">
         <div className="flex flex-col space-y-2">
           <h1 className="text-xl font-bold">Department Teachers</h1>
           <p className="text-muted-foreground text-sm">
@@ -137,9 +149,113 @@ export default function HodTeachersPage() {
       </div>
 
       {/* Main Content */}
-      <Card className="flex flex-col h-[calc(100vh-12rem)]">
+      <Card className="flex flex-col h-[calc(100vh-12rem)] mt-5 lg:mt-0">
         <CardHeader>
-          <div className="flex gap-3">
+          {/* ── Mobile filters: 3 in row one (search/status/gender), the
+              focused one grows and the other two shrink out of its way;
+              qualification gets its own full-width row underneath. ────── */}
+          <div className="flex lg:hidden gap-2">
+            <div
+              className={cn(
+                "relative min-w-0 transition-all duration-200",
+                activeMobileFilter === "search" ? "flex-[3]" : "flex-1"
+              )}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setActiveMobileFilter("search")}
+                onBlur={() => setActiveMobileFilter(null)}
+              />
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "status" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as StaffStatus | "all")
+                }
+                onOpenChange={(open) =>
+                  setActiveMobileFilter(open ? "status" : null)
+                }>
+                <SelectTrigger className={activeMobileFilter === "status" ? "w-fit" : "w-full"}>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value={StaffStatus.ACTIVE}>Active</SelectItem>
+                  <SelectItem value={StaffStatus.ON_LEAVE}>On Leave</SelectItem>
+                  <SelectItem value={StaffStatus.RETIRED}>Retired</SelectItem>
+                  <SelectItem value={StaffStatus.TERMINATED}>
+                    Terminated
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "gender" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={genderFilter}
+                onValueChange={(value) =>
+                  setGenderFilter(value as Gender | "all")
+                }
+                onOpenChange={(open) =>
+                  setActiveMobileFilter(open ? "gender" : null)
+                }>
+                <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit" : "w-full"}>
+                  <SelectValue placeholder="Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Genders</SelectItem>
+                  <SelectItem value={Gender.MALE}>Male</SelectItem>
+                  <SelectItem value={Gender.FEMALE}>Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="lg:hidden mt-2">
+            <Select
+              value={qualificationFilter}
+              onValueChange={(value) =>
+                setQualificationFilter(value as QualificationLevel | "all")
+              }>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by Qualification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Qualifications</SelectItem>
+                <SelectItem value={QualificationLevel.CERTIFICATE}>
+                  Certificate
+                </SelectItem>
+                <SelectItem value={QualificationLevel.DIPLOMA}>
+                  Diploma
+                </SelectItem>
+                <SelectItem value={QualificationLevel.DEGREE}>
+                  Degree
+                </SelectItem>
+                <SelectItem value={QualificationLevel.MASTERS}>
+                  Masters
+                </SelectItem>
+                <SelectItem value={QualificationLevel.DOCTORATE}>
+                  PhD
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ── Desktop filters — unchanged ─────────────────────────────── */}
+          <div className="hidden lg:flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -220,17 +336,33 @@ export default function HodTeachersPage() {
           )}
 
           {isLoading ? (
-            <div className="space-y-3 pt-2">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 px-1">
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-16 ml-auto" />
-                </div>
-              ))}
-            </div>
+            <>
+              {/* Mobile skeleton — mirrors TeachersTable's tappable card rows */}
+              <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3">
+                    <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <Skeleton className="h-4 w-14 rounded-full shrink-0" />
+                    <Skeleton className="h-4 w-4 shrink-0" />
+                  </div>
+                ))}
+              </div>
+              {/* Desktop skeleton — mirrors the Teacher/Phone/Subjects/Status/Actions table */}
+              <div className="hidden lg:block space-y-3 pt-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 px-1">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-16 ml-auto" />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : teachers.length === 0 ? (
             <Empty className="h-96">
               <EmptyContent>
@@ -262,6 +394,7 @@ export default function HodTeachersPage() {
               }}
               onEdit={() => {}}
               onDelete={() => {}}
+              hideStaffNumberOnMobile
             />
           )}
         </CardContent>

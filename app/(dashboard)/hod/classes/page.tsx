@@ -36,6 +36,8 @@ import { ClassSheet } from "@/components/classes/class-sheet";
 import { useHodClasses } from "@/hooks/useHodClasses";
 import { ClassStatus } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
+import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { cn } from "@/lib/utils";
 
 export default function HodClassesPage() {
   const { toast } = useToast();
@@ -47,6 +49,12 @@ export default function HodClassesPage() {
   const [gradeFilter, setGradeFilter] = useState<string | "all">("all");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetClassId, setSheetClassId] = useState<string | null>(null);
+
+  // Mobile-only: which of the first-row filters is currently focused/open,
+  // so it can grow while the other shrinks out of its way.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "grade" | null
+  >(null);
 
   // Fetch all classes (unfiltered, large page) once to derive grade options for the dropdown
   const { classes: allClassesForGrades } = useHodClasses(undefined, { page: 1, pageSize: 200 });
@@ -89,6 +97,10 @@ export default function HodClassesPage() {
       description: "Class list has been refreshed",
     });
   };
+
+  // On mobile, the refresh action lives as an icon next to the notification
+  // bell in the layout's header instead of the inline "Refresh" button below.
+  useMobileHeaderRefresh(handleRefresh, isLoading);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= meta.totalPages) {
@@ -140,9 +152,9 @@ export default function HodClassesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between mt-2">
+    <div className="space-y-6 px-4 lg:px-0">
+      {/* Page Header — desktop only; mobile top bar handles the title + refresh */}
+      <div className="hidden lg:flex items-start justify-between mt-2">
         <div className="flex flex-col space-y-2">
           <h1 className="text-xl font-bold">Department Classes</h1>
           <p className="text-muted-foreground text-sm">
@@ -163,9 +175,72 @@ export default function HodClassesPage() {
       </div>
 
       {/* Main Content */}
-      <Card className="flex flex-col h-[calc(100vh-12rem)]">
+      <Card className="flex flex-col h-[calc(100vh-12rem)] mt-5 lg:mt-0">
         <CardHeader>
-          <div className="flex gap-3">
+          {/* ── Mobile filters: search + grade share row one, the focused
+              one grows and the other shrinks; status gets its own
+              full-width row underneath. ─────────────────────────────── */}
+          <div className="flex lg:hidden gap-2">
+            <div
+              className={cn(
+                "relative min-w-0 transition-all duration-200",
+                activeMobileFilter === "search" ? "flex-[3]" : "flex-1"
+              )}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setActiveMobileFilter("search")}
+                onBlur={() => setActiveMobileFilter(null)}
+              />
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "grade" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={gradeFilter}
+                onValueChange={(value) => setGradeFilter(value)}
+                onOpenChange={(open) =>
+                  setActiveMobileFilter(open ? "grade" : null)
+                }>
+                <SelectTrigger className={activeMobileFilter === "grade" ? "w-fit" : "w-full"}>
+                  <SelectValue placeholder="Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {gradeOptions.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="lg:hidden mt-2">
+            <Select
+              value={statusFilter}
+              onValueChange={(value) =>
+                setStatusFilter(value as ClassStatus | "all")
+              }>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value={ClassStatus.ACTIVE}>Active</SelectItem>
+                <SelectItem value={ClassStatus.INACTIVE}>Inactive</SelectItem>
+                <SelectItem value={ClassStatus.ARCHIVED}>Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ── Desktop filters — unchanged ─────────────────────────────── */}
+          <div className="hidden lg:flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -215,17 +290,33 @@ export default function HodClassesPage() {
           )}
 
           {isLoading ? (
-            <div className="space-y-3 pt-2">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 px-1">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-16 ml-auto" />
-                </div>
-              ))}
-            </div>
+            <>
+              {/* Mobile skeleton — mirrors ClassesTable's tappable card rows */}
+              <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3">
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-36" />
+                    </div>
+                    <Skeleton className="h-4 w-14 rounded-full shrink-0" />
+                    <Skeleton className="h-4 w-4 shrink-0" />
+                  </div>
+                ))}
+              </div>
+              {/* Desktop skeleton — mirrors the Class/Grade/Teacher/Status/Actions table */}
+              <div className="hidden lg:block space-y-3 pt-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 px-1">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-16 ml-auto" />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : classes.length === 0 ? (
             <Empty className="h-96">
               <EmptyContent>
@@ -254,6 +345,7 @@ export default function HodClassesPage() {
               onManageAssignments={(classItem) => {
                 handleManageAssignments(classItem);
               }}
+              mobileCardView
             />
           )}
         </CardContent>

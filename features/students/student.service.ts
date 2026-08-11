@@ -92,6 +92,8 @@ export interface StudentFilters {
   gender?: Gender;
   search?: string;
   vulnerability?: VulnerabilityStatus;
+  /** Active enrollment in this class. */
+  classId?: string;
 }
 
 export interface PaginationParams {
@@ -349,23 +351,34 @@ export class StudentService {
       }
     }
 
-    const includeEnrollments = academicYearId
-      ? {
-          enrollments: {
-            where: {
-              academicYearId: academicYearId,
-              status: "ACTIVE",
-            },
+    // Filter by current class (active enrollment in a specific class)
+    if (filters?.classId) {
+      where.enrollments = {
+        some: {
+          ...(where.enrollments as { some?: object } | undefined)?.some,
+          classId: filters.classId,
+          status: "ACTIVE",
+        },
+      };
+    }
+
+    // Always include the student's current class/grade — the UI displays it
+    // regardless of whether a class or academic-year filter is active.
+    const includeEnrollments = {
+      enrollments: {
+        where: {
+          status: "ACTIVE" as const,
+          ...(academicYearId ? { academicYearId } : {}),
+        },
+        include: {
+          class: {
             include: {
-              class: {
-                include: {
-                  grade: true,
-                },
-              },
+              grade: true,
             },
           },
-        }
-      : undefined;
+        },
+      },
+    };
 
     return await (studentRepository.findMany as any)({
       where,
@@ -439,6 +452,17 @@ export class StudentService {
       }
     }
 
+    // Filter by current class (active enrollment in a specific class)
+    if (filters?.classId) {
+      where.enrollments = {
+        some: {
+          ...(where.enrollments as { some?: object } | undefined)?.some,
+          classId: filters.classId,
+          status: "ACTIVE",
+        },
+      };
+    }
+
     // Get total count
     const total = await studentRepository.count(where);
 
@@ -447,24 +471,23 @@ export class StudentService {
     const pageSize = pagination?.pageSize || 10;
     const skip = (page - 1) * pageSize;
 
-    // Fetch data with enrollments included for display when filtering
-    const includeEnrollments = academicYearId
-      ? {
-          enrollments: {
-            where: {
-              academicYearId: academicYearId,
-              status: "ACTIVE",
-            },
+    // Always include the student's current class/grade — the UI displays it
+    // regardless of whether a class or academic-year filter is active.
+    const includeEnrollments = {
+      enrollments: {
+        where: {
+          status: "ACTIVE" as const,
+          ...(academicYearId ? { academicYearId } : {}),
+        },
+        include: {
+          class: {
             include: {
-              class: {
-                include: {
-                  grade: true,
-                },
-              },
+              grade: true,
             },
           },
-        }
-      : undefined;
+        },
+      },
+    };
 
     const data = await (studentRepository.findMany as any)({
       where,

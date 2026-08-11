@@ -18,6 +18,7 @@ interface StudentFilters {
   status?: StudentStatus;
   gender?: Gender;
   search?: string;
+  classId?: string;
 }
 
 interface PaginationParams {
@@ -86,6 +87,7 @@ export function useStudents(
       if (filters?.status) params.append("status", filters.status);
       if (filters?.gender) params.append("gender", filters.gender);
       if (filters?.search) params.append("search", filters.search);
+      if (filters?.classId) params.append("classId", filters.classId);
 
       const page = pagination?.page || 1;
       const pageSize = pagination?.pageSize || 10;
@@ -321,7 +323,7 @@ export function useStudents(
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters?.status, filters?.gender, filters?.search, pagination?.page, pagination?.pageSize]);
+  }, [filters?.status, filters?.gender, filters?.search, filters?.classId, pagination?.page, pagination?.pageSize]);
 
   return {
     // State

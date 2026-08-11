@@ -21,9 +21,11 @@ import {
   Trash2,
   Users,
   BookOpen,
+  ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Class, ClassStatus } from "@/types/prisma-enums";
+import { cn } from "@/lib/utils";
 
 type ClassWithRelations = Class & {
   grade?: { name: string; level: string | number } | null;
@@ -49,6 +51,10 @@ interface ClassesTableProps {
   onEnrollStudents?: (classItem: ClassWithRelations) => void;
   onManageAssignments?: (classItem: ClassWithRelations) => void;
   showActions?: boolean;
+  /** Opt in to a separate tappable card layout on mobile (grade column
+   *  dropped, class name prefixed with its grade number instead). When
+   *  false (default), the desktop table renders unchanged at every size. */
+  mobileCardView?: boolean;
 }
 
 const getStatusVariant = (status: ClassStatus) => {
@@ -64,6 +70,19 @@ const getStatusVariant = (status: ClassStatus) => {
   }
 };
 
+// Form-grade classes are already named "F1 Blue", "F2-A", etc. — the form
+// number is baked into the name, so they're self-identifying even without
+// the Grade column visible. Anything else (e.g. a bare "A") isn't, so
+// prefix it with the grade's number pulled from the grade name (e.g.
+// "Grade 10" -> "10 A").
+const formatMobileClassName = (classItem: ClassWithRelations) => {
+  const name = classItem.name;
+  if (/^f[1-5]\b/i.test(name)) return name;
+  const gradeNumber = classItem.grade?.name?.match(/\d+/)?.[0];
+  if (!gradeNumber || name.trim().startsWith(gradeNumber)) return name;
+  return `${gradeNumber} ${name}`;
+};
+
 export function ClassesTable({
   classes,
   onRowClick,
@@ -72,28 +91,118 @@ export function ClassesTable({
   onEnrollStudents,
   onManageAssignments,
   showActions = true,
+  mobileCardView = false,
 }: ClassesTableProps) {
+  const renderActions = (classItem: ClassWithRelations) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(classItem);
+          }}>
+          <Edit className="h-4 w-4 mr-2" />
+          Edit
+        </DropdownMenuItem>
+        {onEnrollStudents && (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnrollStudents(classItem);
+            }}>
+            <Users className="h-4 w-4 mr-2" />
+            Enroll Students
+          </DropdownMenuItem>
+        )}
+        {onManageAssignments && (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              onManageAssignments(classItem);
+            }}>
+            <BookOpen className="h-4 w-4 mr-2" />
+            Manage Assignments
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(classItem);
+          }}
+          className="text-destructive">
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  if (classes.length === 0) {
+    return (
+      <div className="rounded-md border py-10 text-center text-sm text-muted-foreground">
+        No classes found
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Class</TableHead>
-            <TableHead>Grade Level</TableHead>
-            <TableHead>Class Teacher</TableHead>
-            <TableHead>Status</TableHead>
-            {showActions && <TableHead className="text-right">Actions</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {classes.length === 0 ? (
+    <>
+      {/* ── Mobile: tappable card rows — grade dropped from the card front
+          (the class name is prefixed with its grade number instead when it
+          doesn't already read as "Form 1"–"Form 5") ────────────────────── */}
+      {mobileCardView && (
+      <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+        {classes.map((classItem) => {
+          const classTeacher = classItem.classTeacherAssignments?.[0]?.teacher;
+          const teacherName = classTeacher
+            ? `${classTeacher.firstName} ${classTeacher.lastName}`
+            : "Not assigned";
+
+          return (
+            <div
+              key={classItem.id}
+              onClick={() => onRowClick(classItem)}
+              className="flex items-center gap-3 p-3 active:bg-muted/70 transition-colors cursor-pointer"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">
+                  {formatMobileClassName(classItem)}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {teacherName} · {classItem.currentEnrolled}/{classItem.capacity}
+                </p>
+              </div>
+              <Badge variant={getStatusVariant(classItem.status)} className="text-[10px] px-1.5 py-0 shrink-0">
+                {classItem.status}
+              </Badge>
+              {showActions && renderActions(classItem)}
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </div>
+          );
+        })}
+      </div>
+      )}
+
+      {/* ── Desktop table — unchanged; only restricted to lg+ when the
+          mobile card view above is active for this consumer ───────────── */}
+      <div className={cn("rounded-md border", mobileCardView && "hidden lg:block")}>
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={showActions ? 5 : 4} className="text-center text-muted-foreground">
-                No classes found
-              </TableCell>
+              <TableHead>Class</TableHead>
+              <TableHead>Grade Level</TableHead>
+              <TableHead>Class Teacher</TableHead>
+              <TableHead>Status</TableHead>
+              {showActions && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
-          ) : (
-            classes.map((classItem) => {
+          </TableHeader>
+          <TableBody>
+            {classes.map((classItem) => {
               const classTeacher = classItem.classTeacherAssignments?.[0]?.teacher;
               const teacherName = classTeacher
                 ? `${classTeacher.firstName} ${classTeacher.lastName}`
@@ -132,62 +241,15 @@ export function ClassesTable({
                   </TableCell>
                   {showActions && (
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          asChild
-                          onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(classItem);
-                            }}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          {onEnrollStudents && (
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEnrollStudents(classItem);
-                              }}>
-                              <Users className="h-4 w-4 mr-2" />
-                              Enroll Students
-                            </DropdownMenuItem>
-                          )}
-                          {onManageAssignments && (
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onManageAssignments(classItem);
-                              }}>
-                              <BookOpen className="h-4 w-4 mr-2" />
-                              Manage Assignments
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(classItem);
-                            }}
-                            className="text-destructive">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {renderActions(classItem)}
                     </TableCell>
                   )}
                 </TableRow>
               );
-            })
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }

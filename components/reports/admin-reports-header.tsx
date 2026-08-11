@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -8,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatClassLabel } from "@/lib/utils";
+import { cn, formatClassLabel } from "@/lib/utils";
 
 interface GradeOption {
   id: string;
@@ -54,6 +55,10 @@ interface AdminReportsHeaderProps {
   terms: TermOption[];
   hideClassFilter?: boolean;
   hideSubjectFilter?: boolean;
+  /** Opt in to a mobile-only compact filter layout: Grade/Class/Subject
+   *  share row one (the focused one grows, the others shrink), Term spans
+   *  its own full-width row underneath. Desktop is unaffected either way. */
+  mobileCompactFilters?: boolean;
 }
 
 export function AdminReportsHeader({
@@ -74,9 +79,20 @@ export function AdminReportsHeader({
   terms,
   hideClassFilter = false,
   hideSubjectFilter = false,
+  mobileCompactFilters = false,
 }: AdminReportsHeaderProps) {
   const selectedGradeData = grades.find((g) => g.id === selectedGrade);
   const selectedClassData = classes.find((c) => c.id === selectedClass);
+
+  // Mobile-only: which of the row-one filters is currently open, so it can
+  // grow while the other(s) shrink out of its way.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "grade" | "class" | "subject" | null
+  >(null);
+  const flexFor = (key: "grade" | "class" | "subject") =>
+    activeMobileFilter === key ? "flex-none max-w-[70%]" : "flex-1";
+  const triggerFor = (key: "grade" | "class" | "subject") =>
+    activeMobileFilter === key ? "w-fit" : "w-full";
 
   const getDescription = () => {
     if (hideClassFilter) {
@@ -100,9 +116,90 @@ export function AdminReportsHeader({
             <p className="hidden lg:block text-muted-foreground text-sm">{getDescription()}</p>
           </div>
 
+          {/* Mobile compact layout (opt-in): Grade/Class/Subject share row
+              one — the open one grows, the others shrink — Term spans its
+              own full-width row underneath. */}
+          {mobileCompactFilters && (
+            <div className="flex flex-col gap-2 lg:hidden">
+              <div className="flex gap-2">
+                <div className={cn("min-w-0 transition-all duration-200", flexFor("grade"))}>
+                  <Select
+                    value={selectedGrade}
+                    onValueChange={onGradeChange}
+                    onOpenChange={(open) => setActiveMobileFilter(open ? "grade" : null)}>
+                    <SelectTrigger className={triggerFor("grade")}>
+                      <SelectValue placeholder="Grade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {grades.map((grade) => (
+                        <SelectItem key={grade.id} value={grade.id}>
+                          {grade.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {!hideClassFilter && (
+                  <div className={cn("min-w-0 transition-all duration-200", flexFor("class"))}>
+                    <Select
+                      value={selectedClass}
+                      onValueChange={onClassChange}
+                      disabled={!selectedGrade}
+                      onOpenChange={(open) => setActiveMobileFilter(open ? "class" : null)}>
+                      <SelectTrigger className={triggerFor("class")}>
+                        <SelectValue placeholder="Class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classes.map((classOption) => (
+                          <SelectItem key={classOption.id} value={classOption.id}>
+                            {formatClassLabel(classOption.gradeName, classOption.name)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {!hideSubjectFilter && (
+                  <div className={cn("min-w-0 transition-all duration-200", flexFor("subject"))}>
+                    <Select
+                      value={selectedSubject}
+                      onValueChange={onSubjectChange}
+                      onOpenChange={(open) => setActiveMobileFilter(open ? "subject" : null)}>
+                      <SelectTrigger className={triggerFor("subject")}>
+                        <SelectValue placeholder="Subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <Select value={selectedTerm} onValueChange={onTermChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Term" />
+                </SelectTrigger>
+                <SelectContent>
+                  {terms.map((term) => (
+                    <SelectItem key={term.id} value={term.id}>
+                      {term.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Filters — wrap onto multiple lines on narrower viewports instead
               of overflowing the card horizontally. */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className={cn("flex-wrap items-center gap-3", mobileCompactFilters ? "hidden lg:flex" : "flex")}>
             <Select value={selectedGrade} onValueChange={onGradeChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select Grade" />

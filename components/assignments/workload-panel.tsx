@@ -11,7 +11,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { User, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { User } from "lucide-react";
 
 interface WorkloadPanelProps {
   teachers: AssignmentTeacher[];
@@ -112,8 +112,8 @@ export function WorkloadPanel({ teachers }: WorkloadPanelProps) {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-2">
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-4 space-y-1.5">
           {filtered.length === 0 ? (
             <div className="text-center py-12">
               <User className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
@@ -184,7 +184,7 @@ function TeacherWorkloadCard({ teacher }: { teacher: AssignmentTeacher }) {
   }[status];
 
   const badgeCn = cn(
-    "text-[10px] font-medium shrink-0 gap-1",
+    "text-[9px] font-medium shrink-0 px-1.5 py-0",
     status === "normal" &&
       "border-green-500/30 text-green-700 bg-green-500/10",
     status === "overloaded" &&
@@ -193,64 +193,47 @@ function TeacherWorkloadCard({ teacher }: { teacher: AssignmentTeacher }) {
       "border-yellow-500/30 text-yellow-700 bg-yellow-500/10"
   );
 
-  const StatusIcon =
-    status === "overloaded"
-      ? TrendingUp
-      : status === "underutilized"
-      ? TrendingDown
-      : Minus;
-
   return (
     <div
       className={cn(
-        "bg-card rounded-lg border border-border border-l-[3px] p-3 transition-all hover:shadow-sm",
+        "bg-card rounded-lg border border-border border-l-[3px] px-3 py-2 transition-all hover:shadow-sm",
         borderColor
       )}
     >
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <User className="h-4 w-4 text-primary" />
+      <div className="flex items-center gap-2.5">
+        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <User className="h-3.5 w-3.5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight truncate">
             {teacher.name}
           </p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground">
             {teacher.totalClasses}{" "}
             {teacher.totalClasses === 1 ? "class" : "classes"}
           </p>
         </div>
         <Badge variant="outline" className={badgeCn}>
-          <StatusIcon className="h-2.5 w-2.5" />
           {getLoadLabel(status)}
         </Badge>
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-muted-foreground">Periods / week</span>
-          <span className="tabular-nums">
-            <span className={cn("font-bold", valueColor)}>
-              {teacher.periodsPerWeek}
-            </span>
-            <span className="text-muted-foreground font-normal">
-              {" "}
-              / {teacher.maxPeriods}
-            </span>
-          </span>
-        </div>
+      <div className="flex items-center gap-2 mt-1.5">
         <Progress
           value={pct}
           className={cn(
-            "h-2",
+            "h-1.5 flex-1",
             status === "overloaded" && "[&>div]:bg-destructive",
             status === "underutilized" && "[&>div]:bg-yellow-500",
             status === "normal" && "[&>div]:bg-green-500"
           )}
         />
-        <p className="text-[10px] text-muted-foreground text-right">
-          {Math.round(pct)}% capacity used
-        </p>
+        <span className="text-[10px] tabular-nums text-muted-foreground shrink-0">
+          <span className={cn("font-semibold", valueColor)}>
+            {teacher.periodsPerWeek}
+          </span>
+          /{teacher.maxPeriods}
+        </span>
       </div>
     </div>
   );

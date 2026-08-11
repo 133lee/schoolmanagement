@@ -115,8 +115,8 @@ export default function HODReportCardsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between mt-2">
+      {/* Page Header — desktop only; mobile top bar handles the title */}
+      <div className="hidden lg:flex items-start justify-between mt-2">
         <div className="flex flex-col space-y-1">
           <h1 className="text-xl font-bold">Reports & Analysis</h1>
           <p className="text-muted-foreground text-sm">
@@ -136,18 +136,32 @@ export default function HODReportCardsPage() {
       {/* Loading State */}
       {loading && (
         <div className="space-y-6">
-          {/* Filter bar skeleton */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Skeleton className="h-9 w-36" />
-            <Skeleton className="h-9 w-36" />
-            <Skeleton className="h-9 w-36" />
-            <Skeleton className="h-9 w-36" />
+          {/* Filter bar skeleton — mirrors AdminReportsHeader's mobile
+              compact layout (3 in row one, 1 spanning row two) vs desktop's
+              flat row. */}
+          <div className="px-4 lg:px-0">
+            <div className="flex flex-col gap-2 lg:hidden">
+              <div className="flex gap-2">
+                <Skeleton className="h-9 flex-1" />
+                <Skeleton className="h-9 flex-1" />
+                <Skeleton className="h-9 flex-1" />
+              </div>
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="hidden lg:flex items-center gap-3 flex-wrap">
+              <Skeleton className="h-9 w-36" />
+              <Skeleton className="h-9 w-36" />
+              <Skeleton className="h-9 w-36" />
+              <Skeleton className="h-9 w-36" />
+            </div>
           </div>
           {/* Tabs skeleton */}
-          <Skeleton className="h-10 w-full rounded-md" />
+          <div className="px-4 lg:px-0">
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
           {/* Content skeleton */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-4 px-4 lg:px-0">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <Skeleton className="h-24 rounded-xl" />
               <Skeleton className="h-24 rounded-xl" />
               <Skeleton className="h-24 rounded-xl" />
@@ -174,39 +188,44 @@ export default function HODReportCardsPage() {
           onValueChange={(v) => setActiveTab(v as "subject-analysis" | "performance-lists")}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50">
-            <TabsTrigger
-              value="subject-analysis"
-              className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Subject Analysis
-            </TabsTrigger>
-            <TabsTrigger
-              value="performance-lists"
-              className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Performance Lists
-            </TabsTrigger>
-          </TabsList>
+          <div className="px-4 pt-4 lg:px-0 lg:pt-0">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+              <TabsTrigger
+                value="subject-analysis"
+                className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Subject Analysis
+              </TabsTrigger>
+              <TabsTrigger
+                value="performance-lists"
+                className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Performance Lists
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Subject Analysis Tab */}
           <TabsContent value="subject-analysis" className="mt-6 space-y-6">
-            <AdminReportsHeader
-              selectedGrade={selectedGrade}
-              onGradeChange={setSelectedGrade}
-              selectedClass={selectedClass}
-              onClassChange={setSelectedClass}
-              selectedSubject={selectedSubject}
-              onSubjectChange={setSelectedSubject}
-              selectedTerm={selectedTerm}
-              onTermChange={setSelectedTerm}
-              grades={grades}
-              classes={classes}
-              subjects={subjects}
-              terms={terms}
-            />
+            <div className="px-4 lg:px-0">
+              <AdminReportsHeader
+                selectedGrade={selectedGrade}
+                onGradeChange={setSelectedGrade}
+                selectedClass={selectedClass}
+                onClassChange={setSelectedClass}
+                selectedSubject={selectedSubject}
+                onSubjectChange={setSelectedSubject}
+                selectedTerm={selectedTerm}
+                onTermChange={setSelectedTerm}
+                grades={grades}
+                classes={classes}
+                subjects={subjects}
+                terms={terms}
+                mobileCompactFilters
+              />
+            </div>
 
             {!selectedClass || !selectedSubject || !selectedTerm ? (
               <Card>
@@ -239,20 +258,23 @@ export default function HODReportCardsPage() {
 
           {/* Performance Lists Tab */}
           <TabsContent value="performance-lists" className="mt-6 space-y-6">
-            <AdminReportsHeader
-              selectedGrade={selectedGrade}
-              onGradeChange={setSelectedGrade}
-              selectedClass={selectedClass}
-              onClassChange={setSelectedClass}
-              selectedSubject={selectedSubject}
-              onSubjectChange={setSelectedSubject}
-              selectedTerm={selectedTerm}
-              onTermChange={setSelectedTerm}
-              grades={grades}
-              classes={classes}
-              subjects={subjects}
-              terms={terms}
-            />
+            <div className="px-4 lg:px-0">
+              <AdminReportsHeader
+                selectedGrade={selectedGrade}
+                onGradeChange={setSelectedGrade}
+                selectedClass={selectedClass}
+                onClassChange={setSelectedClass}
+                selectedSubject={selectedSubject}
+                onSubjectChange={setSelectedSubject}
+                selectedTerm={selectedTerm}
+                onTermChange={setSelectedTerm}
+                grades={grades}
+                classes={classes}
+                subjects={subjects}
+                terms={terms}
+                mobileCompactFilters
+              />
+            </div>
 
             {!selectedClass || !selectedTerm ? (
               <Card>

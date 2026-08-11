@@ -44,6 +44,8 @@ interface TeachersTableProps {
   onContact?: (teacher: TeacherWithRelations) => void;
   onResetPassword?: (teacher: TeacherWithRelations) => void;
   showActions?: boolean;
+  /** Hide the staff-number badge on the mobile card row (desktop table is unaffected). */
+  hideStaffNumberOnMobile?: boolean;
 }
 
 const getStatusVariant = (status: StaffStatus) => {
@@ -70,6 +72,7 @@ export function TeachersTable({
   onContact,
   onResetPassword,
   showActions = true,
+  hideStaffNumberOnMobile = false,
 }: TeachersTableProps) {
   const renderActions = (teacher: TeacherWithRelations) => (
     <DropdownMenu>
@@ -149,9 +152,11 @@ export function TeachersTable({
               </Avatar>
               <div className="flex-1 flex items-center justify-between gap-3 min-w-0">
                 <p className="font-semibold text-sm truncate flex-1 min-w-0">{fullName}</p>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono shrink-0">
-                  {teacher.staffNumber}
-                </Badge>
+                {!hideStaffNumberOnMobile && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono shrink-0">
+                    {teacher.staffNumber}
+                  </Badge>
+                )}
                 <Badge variant={getStatusVariant(teacher.status)} className="text-[10px] px-1.5 py-0 shrink-0">
                   {teacher.status}
                 </Badge>

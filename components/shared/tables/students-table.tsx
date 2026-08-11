@@ -57,6 +57,20 @@ interface StudentsTableProps {
   onEmergencyContact?: (student: ExtendedStudent) => void;
   onLinkGuardian?: (student: ExtendedStudent) => void;
   showActions?: boolean;
+  /** Mobile card badge only: "10 A" instead of "Grade 10 A" for classes
+   *  that aren't already self-identifying (Form 1–5 names keep their own
+   *  name, unprefixed). Desktop table is unaffected either way. */
+  compactMobileClassLabel?: boolean;
+}
+
+// Form-grade classes are already named "F1 Blue", "F2-A", etc. — self
+// identifying. Anything else gets the grade's number prefixed instead
+// (e.g. "Grade 10" + "A" -> "10 A").
+function formatCompactClassLabel(grade: string, className: string) {
+  if (/^f[1-5]\b/i.test(className)) return className;
+  const gradeNumber = grade?.match(/\d+/)?.[0];
+  if (!gradeNumber || className.trim().startsWith(gradeNumber)) return className;
+  return `${gradeNumber} ${className}`;
 }
 
 const statusVariants: Record<StudentStatus, "default" | "secondary" | "destructive" | "outline"> = {
@@ -77,6 +91,7 @@ export function StudentsTable({
   onEmergencyContact,
   onLinkGuardian,
   showActions = true,
+  compactMobileClassLabel = false,
 }: StudentsTableProps) {
   // Helper to get student full name
   const getFullName = (student: ExtendedStudent) => {
@@ -162,7 +177,9 @@ export function StudentsTable({
         {students.map((student) => {
           const classLabel =
             student.grade && student.className
-              ? formatClassLabel(student.grade, student.className)
+              ? compactMobileClassLabel
+                ? formatCompactClassLabel(student.grade, student.className)
+                : formatClassLabel(student.grade, student.className)
               : student.className || student.grade || "No class assigned";
 
           return (

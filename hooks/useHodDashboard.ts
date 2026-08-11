@@ -49,7 +49,7 @@ interface HodDashboardData {
   teachers: TeacherInfo[];
   academicYear: {
     id: string;
-    name: string;
+    year: number;
   };
   term: {
     id: string;

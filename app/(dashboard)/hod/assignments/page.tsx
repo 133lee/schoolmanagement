@@ -613,29 +613,59 @@ export default function HodAssignmentsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-start justify-between mt-2">
-          <div className="flex flex-col space-y-1">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-4 w-36" />
-          </div>
-          <Skeleton className="h-9 w-32" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
-        <div className="border rounded-lg p-6 space-y-3">
-          <Skeleton className="h-5 w-48" />
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-16 ml-auto" />
+      <div className="bg-background">
+        {/* Header skeleton — mirrors AssignmentsDashboard's own header
+            (title hidden on mobile, search + term share one row) */}
+        <div className="px-4 py-4 lg:px-6">
+          <div className="hidden lg:flex items-center justify-between mb-4">
+            <div className="space-y-1">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-64" />
             </div>
-          ))}
+          </div>
+          <div className="flex gap-2 lg:gap-3">
+            <Skeleton className="h-9 flex-1 lg:min-w-[280px] lg:max-w-md lg:flex-none" />
+            <Skeleton className="h-9 w-24 lg:w-[180px]" />
+          </div>
+        </div>
+
+        {/* Stats skeleton — mirrors the 2x2/1x4 StatCard grid */}
+        <div className="px-4 py-4 lg:px-6 border-b border-border bg-secondary/30">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-lg border border-border p-3 lg:p-4 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-7 w-7 lg:h-10 lg:w-10 rounded-md lg:rounded-lg" />
+                </div>
+                <Skeleton className="h-5 lg:h-7 w-10" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main card skeleton — mirrors the tabs bar + matrix */}
+        <div className="p-4 lg:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-9 w-40 lg:w-96 rounded-md" />
+            <Skeleton className="h-8 w-8 lg:w-36 rounded-md" />
+          </div>
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-32 lg:w-40" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-20 lg:w-28" />
+              ))}
+            </div>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-14 w-32 lg:w-40" />
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <Skeleton key={j} className="h-14 w-20 lg:w-28" />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

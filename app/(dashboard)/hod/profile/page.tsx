@@ -91,9 +91,19 @@ export default function HodProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           <div className="lg:col-span-2 space-y-4 lg:space-y-6">
             {[0, 1].map((cardIdx) => (
-              <div key={cardIdx} className="border rounded-lg p-6 space-y-4">
-                <Skeleton className="h-5 w-48" />
-                <div className="grid grid-cols-2 gap-4">
+              <div key={cardIdx} className="border rounded-lg p-4 lg:p-6 space-y-1 lg:space-y-4">
+                <Skeleton className="h-5 w-48 mb-3 lg:mb-0" />
+                {/* Mobile — mirrors the divide-y key/value rows */}
+                <div className="lg:hidden divide-y">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between py-2.5">
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop — mirrors the 2-col field grid */}
+                <div className="hidden lg:grid grid-cols-2 gap-4">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="space-y-1.5">
                       <Skeleton className="h-3 w-24" />
@@ -103,6 +113,10 @@ export default function HodProfilePage() {
                 </div>
               </div>
             ))}
+            <div className="grid grid-cols-2 gap-4">
+              <Skeleton className="h-24 rounded-lg" />
+              <Skeleton className="h-24 rounded-lg" />
+            </div>
           </div>
           <div className="space-y-4"><Skeleton className="h-48 rounded-lg" /></div>
         </div>

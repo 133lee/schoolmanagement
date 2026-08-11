@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useHodDashboard } from "@/hooks/useHodDashboard";
 import { useToast } from "@/hooks/use-toast";
+import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -200,6 +201,10 @@ export default function HodDashboard() {
     toast({ title: "Refreshing", description: "Updating dashboard data..." });
   };
 
+  // On mobile, the refresh action lives as an icon next to the notification
+  // bell in the layout's header instead of the inline "Refresh" button below.
+  useMobileHeaderRefresh(handleRefresh, isLoading);
+
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -236,7 +241,8 @@ export default function HodDashboard() {
   return (
     <div className="space-y-4 px-4 pb-10 lg:px-0 lg:space-y-6">
       {/* ── Welcome header ─────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between pt-1 gap-3">
+      {/* Extra top breathing room on mobile, clear of the sticky top bar — unchanged on lg+ */}
+      <div className="flex items-start justify-between pt-5 lg:pt-1 gap-3">
         <div className="min-w-0">
           <h1 className="text-xl lg:text-2xl font-bold tracking-tight truncate">
             {isLoading ? "Department Dashboard" : data!.department.name}
@@ -244,7 +250,7 @@ export default function HodDashboard() {
           <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">
             {isLoading
               ? "Loading…"
-              : `${data!.academicYear.name}${data!.department.code ? ` · ${data!.department.code}` : ""}`}
+              : `${data!.academicYear.year}${data!.department.code ? ` · ${data!.department.code}` : ""}`}
           </p>
         </div>
         <div className="flex items-center gap-2 mt-0.5 shrink-0">
@@ -258,11 +264,13 @@ export default function HodDashboard() {
               <span className="sm:hidden">{data.term.name.split(" · ")[0]}</span>
             </Badge>
           )}
+          {/* Desktop only — mobile gets an icon-only refresh next to the notification bell instead */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleRefresh}
             disabled={isLoading}
+            className="hidden lg:inline-flex"
           >
             <RefreshCw
               className={cn("h-4 w-4 lg:mr-2", isLoading && "animate-spin")}
@@ -318,12 +326,12 @@ export default function HodDashboard() {
               <CardTitle className="text-sm lg:text-base font-semibold">
                 Performance Overview
               </CardTitle>
-              {/* Filters */}
+              {/* Filters — subject + year share the first row, term spans the second */}
               {!isLoading && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="grid grid-cols-2 gap-2">
                   {/* Subject */}
                   <Select value={perfSubject} onValueChange={setPerfSubject}>
-                    <SelectTrigger className="h-8 text-xs w-36">
+                    <SelectTrigger className="h-8 text-xs w-full">
                       <SelectValue placeholder="All subjects" />
                     </SelectTrigger>
                     <SelectContent>
@@ -338,7 +346,7 @@ export default function HodDashboard() {
 
                   {/* Year */}
                   <Select value={perfYear} onValueChange={handleYearChange}>
-                    <SelectTrigger className="h-8 text-xs w-28">
+                    <SelectTrigger className="h-8 text-xs w-full">
                       <SelectValue placeholder="All years" />
                     </SelectTrigger>
                     <SelectContent>
@@ -351,9 +359,9 @@ export default function HodDashboard() {
                     </SelectContent>
                   </Select>
 
-                  {/* Term */}
+                  {/* Term — spans the full row below */}
                   <Select value={perfTerm} onValueChange={setPerfTerm}>
-                    <SelectTrigger className="h-8 text-xs w-36">
+                    <SelectTrigger className="h-8 text-xs w-full col-span-2">
                       <SelectValue placeholder="All terms" />
                     </SelectTrigger>
                     <SelectContent>
@@ -421,7 +429,7 @@ export default function HodDashboard() {
 
           {/* Subjects */}
           <Card>
-            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm lg:text-base font-semibold">Subjects</CardTitle>
               <Badge variant="outline" className="text-xs">
                 {isLoading ? "—" : data!.department.totalSubjects}
@@ -464,7 +472,7 @@ export default function HodDashboard() {
         <div className="space-y-4 lg:space-y-5">
           {/* Teachers */}
           <Card>
-            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm lg:text-base font-semibold">Teachers</CardTitle>
               <Badge variant="outline" className="text-xs">
                 {isLoading ? "—" : data!.department.totalTeachers}

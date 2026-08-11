@@ -161,7 +161,7 @@ export function ActivityLog({ activities, schoolTerms = [] }: ActivityLogProps) 
         )}
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         {filtered.length === 0 ? (
           <div className="text-center py-14 px-6">
             <Clock className="h-9 w-9 text-muted-foreground/30 mx-auto mb-3" />
@@ -185,7 +185,7 @@ export function ActivityLog({ activities, schoolTerms = [] }: ActivityLogProps) 
                   <span className="flex-1 h-px bg-border" />
                   <span>{items.length}</span>
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {items.map((activity) => {
                     const {
                       Icon,
@@ -197,15 +197,15 @@ export function ActivityLog({ activities, schoolTerms = [] }: ActivityLogProps) 
                     return (
                       <div
                         key={activity.id}
-                        className="flex gap-3 items-start bg-muted/30 hover:bg-muted/50 transition-colors rounded-lg p-3"
+                        className="flex gap-2.5 items-start bg-muted/30 hover:bg-muted/50 transition-colors rounded-lg px-2.5 py-2"
                       >
                         <div
                           className={cn(
-                            "h-7 w-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                            "h-6 w-6 rounded-full flex items-center justify-center shrink-0 mt-0.5",
                             iconCn
                           )}
                         >
-                          <Icon className="h-3.5 w-3.5" />
+                          <Icon className="h-3 w-3" />
                         </div>
 
                         <div className="flex-1 min-w-0">

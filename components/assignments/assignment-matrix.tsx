@@ -34,6 +34,21 @@ interface AssignmentMatrixProps {
   isLoading?: boolean;
 }
 
+// Form-grade classes are already named "F1 Blue", "F2-A", etc. — self
+// identifying. Anything else (e.g. a bare "A") gets the grade's number
+// prefixed instead, for the narrower mobile column headers.
+function formatMobileClassLabel(cls: AssignmentClass) {
+  if (/^f[1-5]\b/i.test(cls.name)) return cls.name;
+  const gradeNumber = cls.grade?.match(/\d+/)?.[0];
+  if (!gradeNumber || cls.name.trim().startsWith(gradeNumber)) return cls.name;
+  return `${gradeNumber} ${cls.name}`;
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return `${parts[0]?.[0] ?? ""}${parts[parts.length - 1]?.[0] ?? ""}`.toUpperCase();
+}
+
 export function AssignmentMatrix({
   subjects,
   classes,
@@ -81,7 +96,8 @@ export function AssignmentMatrix({
               >
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  {cls.grade} {cls.name}
+                  <span className="lg:hidden">{formatMobileClassLabel(cls)}</span>
+                  <span className="hidden lg:inline">{cls.grade} {cls.name}</span>
                 </span>
               </th>
             ))}
@@ -106,7 +122,8 @@ export function AssignmentMatrix({
                     }}
                   />
                   <span className="font-medium text-sm text-foreground">
-                    {subject.name}
+                    <span className="lg:hidden">{subject.code}</span>
+                    <span className="hidden lg:inline">{subject.name}</span>
                   </span>
                 </div>
               </td>
@@ -175,13 +192,15 @@ function AssignmentCell({
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {isAssigned ? (
                   <span className="truncate text-sm font-medium text-foreground">
-                    {teacher?.name}
+                    <span className="lg:hidden">{getInitials(teacher!.name)}</span>
+                    <span className="hidden lg:inline">{teacher?.name}</span>
                   </span>
                 ) : (
                   <>
                     <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
                     <span className="text-sm text-destructive">
-                      Not Assigned
+                      <span className="lg:hidden">NA</span>
+                      <span className="hidden lg:inline">Not Assigned</span>
                     </span>
                   </>
                 )}
@@ -244,21 +263,23 @@ function AssignmentCell({
 
 function MatrixSkeleton({ rows, cols }: { rows: number; cols: number }) {
   return (
-    <div className="space-y-2 p-4">
-      <div className="flex gap-3">
-        <Skeleton className="h-10 w-40" />
-        {Array.from({ length: cols }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-28" />
-        ))}
-      </div>
-      {Array.from({ length: rows }).map((_, rowIdx) => (
-        <div key={rowIdx} className="flex gap-3">
-          <Skeleton className="h-14 w-40" />
-          {Array.from({ length: cols }).map((_, colIdx) => (
-            <Skeleton key={colIdx} className="h-14 w-28" />
+    <div className="overflow-x-auto p-4">
+      <div className="space-y-2 min-w-max">
+        <div className="flex gap-3">
+          <Skeleton className="h-10 w-32 lg:w-40 shrink-0" />
+          {Array.from({ length: cols }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-24 lg:w-28 shrink-0" />
           ))}
         </div>
-      ))}
+        {Array.from({ length: rows }).map((_, rowIdx) => (
+          <div key={rowIdx} className="flex gap-3">
+            <Skeleton className="h-14 w-32 lg:w-40 shrink-0" />
+            {Array.from({ length: cols }).map((_, colIdx) => (
+              <Skeleton key={colIdx} className="h-14 w-24 lg:w-28 shrink-0" />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

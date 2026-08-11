@@ -23,11 +23,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       gender?: Gender;
       search?: string;
       vulnerability?: VulnerabilityStatus;
+      classId?: string;
     } = {};
     const status = searchParams.get("status");
     const gender = searchParams.get("gender");
     const search = searchParams.get("search");
     const vulnerability = searchParams.get("vulnerability");
+    const classId = searchParams.get("classId");
     const academicYearId = searchParams.get("academicYearId");
     const filterUnenrolled = searchParams.get("filterUnenrolled") === "true";
     const filterEnrolled = searchParams.get("filterEnrolled") === "true";
@@ -36,6 +38,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     if (gender) filters.gender = gender as Gender;
     if (search) filters.search = search;
     if (vulnerability) filters.vulnerability = vulnerability as VulnerabilityStatus;
+    if (classId) filters.classId = classId;
 
     /* ================= NON-PAGINATED MODE ================= */
     if (mode === "all") {
