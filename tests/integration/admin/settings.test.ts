@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import sharp from "sharp";
 import { Role } from "@prisma/client";
 import { GET as getAcademicPolicy, POST as postAcademicPolicy } from "@/app/api/admin/settings/academic-policy/route";
 import { GET as getSchoolInfo, POST as postSchoolInfo } from "@/app/api/admin/settings/school-info/route";
@@ -194,6 +195,44 @@ describe("admin/settings", () => {
       // the "No file provided" check is even reached — either way this must
       // not succeed.
       expect(noFile.status).not.toBe(200);
+    });
+
+    // callRoute only supports JSON bodies (see helpers/callRoute.ts), and this
+    // route always writes to the real public/ folder with no injectable path
+    // — so the actual upload can't be exercised end-to-end via callRoute
+    // without either a helper rewrite or touching real files on disk. This
+    // instead verifies the exact resize pipeline the route runs (same
+    // dimensions/options as app/api/admin/settings/school-info/logo/route.ts)
+    // in isolation: a real regression test that an oversized upload gets
+    // normalized down, matching the bug that broke mark schedule PDF
+    // generation in production (a 4096x4096, 2.1MB logo embedded as base64
+    // and handed to the client-side PDF renderer).
+    it("the logo resize pipeline normalizes an oversized image down to the max dimension", async () => {
+      // Random noise, not a solid color — a uniform-color PNG compresses to
+      // almost nothing regardless of dimensions (PNG's DEFLATE crushes flat
+      // color blocks), which would make a "the input was actually large"
+      // assertion meaningless. Noise approximates a real photo upload.
+      const width = 3000;
+      const height = 2000;
+      const raw = Buffer.from(
+        Array.from({ length: width * height * 3 }, () => Math.floor(Math.random() * 256))
+      );
+      const oversized = await sharp(raw, { raw: { width, height, channels: 3 } })
+        .png()
+        .toBuffer();
+      const oversizedMeta = await sharp(oversized).metadata();
+      expect(oversizedMeta.width).toBe(width);
+      expect(oversizedMeta.height).toBe(height);
+
+      const resized = await sharp(oversized)
+        .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+        .png({ compressionLevel: 9, quality: 90 })
+        .toBuffer();
+
+      const metadata = await sharp(resized).metadata();
+      expect(metadata.width).toBeLessThanOrEqual(512);
+      expect(metadata.height).toBeLessThanOrEqual(512);
+      expect(resized.length).toBeLessThan(oversized.length);
     });
   });
 });
