@@ -68,9 +68,9 @@ export const createStudentSchema = z.object({
     .refine(
       (date) => {
         const age = new Date().getFullYear() - date.getFullYear();
-        return age >= 3 && age <= 25;
+        return age >= 3 && age <= 50;
       },
-      "Student must be between 3 and 25 years old"
+      "Student must be between 3 and 50 years old"
     ),
   gender: genderSchema,
   admissionDate: z
@@ -133,9 +133,9 @@ export const updateStudentSchema = z.object({
     .refine(
       (date) => {
         const age = new Date().getFullYear() - date.getFullYear();
-        return age >= 3 && age <= 25;
+        return age >= 3 && age <= 50;
       },
-      "Student must be between 3 and 25 years old"
+      "Student must be between 3 and 50 years old"
     )
     .optional(),
   gender: genderSchema.optional(),

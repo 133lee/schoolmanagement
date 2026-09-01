@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 
 // Form validation schema
 const assessmentFormSchema = z.object({
@@ -221,7 +221,7 @@ export function AssessmentWizard({
                         <SelectContent>
                           {classes.map((classItem) => (
                             <SelectItem key={classItem.id} value={classItem.id}>
-                              {classItem.grade} {classItem.name}
+                              {formatCompactClassLabel(classItem.grade, classItem.name)}
                             </SelectItem>
                           ))}
                         </SelectContent>

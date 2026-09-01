@@ -21,7 +21,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -657,7 +657,7 @@ export default function TeacherStudentsPage() {
                                   .map((cls) => [cls.id, { id: cls.id, name: cls.name, grade: cls.grade }])
                               ).values()
                             ).map((cls) => (
-                              <SelectItem key={cls.id} value={cls.id}>{cls.name} ({cls.grade})</SelectItem>
+                              <SelectItem key={cls.id} value={cls.id}>{formatCompactClassLabel(cls.grade, cls.name)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -744,7 +744,7 @@ export default function TeacherStudentsPage() {
                             ).values()
                           ).map((cls) => (
                             <SelectItem key={cls.id} value={cls.id}>
-                              {cls.name} ({cls.grade})
+                              {formatCompactClassLabel(cls.grade, cls.name)}
                             </SelectItem>
                           ))}
                         </SelectContent>

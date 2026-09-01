@@ -41,7 +41,7 @@ export const createClassSchema = z.object({
     .number()
     .int("Capacity must be a whole number")
     .min(1, "Capacity must be at least 1")
-    .max(100, "Capacity must not exceed 100")
+    .max(500, "Capacity must not exceed 500")
     .default(40),
   status: classStatusSchema.default("ACTIVE"),
 });
@@ -64,7 +64,7 @@ export const updateClassSchema = z.object({
     .number()
     .int("Capacity must be a whole number")
     .min(1, "Capacity must be at least 1")
-    .max(100, "Capacity must not exceed 100")
+    .max(500, "Capacity must not exceed 500")
     .optional(),
   status: classStatusSchema.optional(),
 });

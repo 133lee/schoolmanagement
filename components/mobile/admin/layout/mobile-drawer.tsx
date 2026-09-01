@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Home, CalendarCheck, ClipboardList, Calendar,
   FileCheck, Building2, FileText, UserCheck,
-  Settings, User, LogOut, Webhook,
+  Settings, LogOut, Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -27,8 +27,6 @@ const drawerNavItems = [
   { title: "Departments",  href: "/admin/departments",        icon: Building2,     exact: false },
   { title: "Subjects",     href: "/admin/subjects",           icon: FileText,      exact: false },
   { title: "Parents",      href: "/admin/parents",            icon: UserCheck,     exact: false },
-  { title: "Settings",     href: "/admin/settings",           icon: Settings,      exact: false },
-  { title: "My Profile",   href: "/admin/profile",            icon: User,          exact: false },
 ];
 
 interface MobileAdminDrawerProps {
@@ -113,6 +111,21 @@ export function MobileAdminDrawer({ open, onClose, user }: MobileAdminDrawerProp
             );
           })}
         </nav>
+
+        {/* Settings — its own accented button, same treatment as HOD's
+            "Switch to Teaching Mode" button, right above Sign out. */}
+        <div className="px-3 pb-3">
+          <Link
+            href="/admin/settings"
+            onClick={onClose}
+            className="flex w-full items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-500/10 dark:text-blue-400"
+          >
+            <span className="flex size-8 items-center justify-center rounded-lg bg-blue-600 text-white shrink-0">
+              <Settings className="size-4" />
+            </span>
+            Settings
+          </Link>
+        </div>
 
         <Separator />
 

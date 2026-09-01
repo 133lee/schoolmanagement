@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Pencil, ChevronDown, UserMinus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,14 +34,8 @@ interface AssignmentMatrixProps {
   isLoading?: boolean;
 }
 
-// Form-grade classes are already named "F1 Blue", "F2-A", etc. — self
-// identifying. Anything else (e.g. a bare "A") gets the grade's number
-// prefixed instead, for the narrower mobile column headers.
 function formatMobileClassLabel(cls: AssignmentClass) {
-  if (/^f[1-5]\b/i.test(cls.name)) return cls.name;
-  const gradeNumber = cls.grade?.match(/\d+/)?.[0];
-  if (!gradeNumber || cls.name.trim().startsWith(gradeNumber)) return cls.name;
-  return `${gradeNumber} ${cls.name}`;
+  return formatCompactClassLabel(cls.grade, cls.name);
 }
 
 function getInitials(name: string) {
@@ -83,7 +77,10 @@ export function AssignmentMatrix({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
+      {/* border-separate (not collapse) — sticky cells + border-collapse is a
+          known Chromium rendering bug that leaves ghost/overlapping paint
+          from scrolled-away columns behind the sticky Subject column. */}
+      <table className="w-full border-separate border-spacing-0">
         <thead>
           <tr>
             <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border min-w-[160px]">
@@ -96,8 +93,7 @@ export function AssignmentMatrix({
               >
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  <span className="lg:hidden">{formatMobileClassLabel(cls)}</span>
-                  <span className="hidden lg:inline">{cls.grade} {cls.name}</span>
+                  <span>{formatMobileClassLabel(cls)}</span>
                 </span>
               </th>
             ))}
@@ -109,7 +105,11 @@ export function AssignmentMatrix({
               key={subject.id}
               className={cn(
                 "transition-colors hover:bg-muted/50",
-                idx % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                // Opaque stripe colors (not a translucent /30) so the sticky
+                // Subject column's inherited background actually occludes
+                // horizontally-scrolled content behind it instead of letting
+                // it show through.
+                idx % 2 === 0 ? "bg-card" : "bg-muted"
               )}
             >
               <td className="sticky left-0 z-10 bg-inherit px-4 py-3 border-b border-border">

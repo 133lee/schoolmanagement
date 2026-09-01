@@ -38,6 +38,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Building2, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { DesktopOnlyNotice } from "@/components/shared/desktop-only-notice";
 
 interface Room {
   id: string;
@@ -66,6 +68,7 @@ const ROOM_TYPES = [
 ];
 
 export default function RoomsPage() {
+  const isMobile = useIsMobile();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -211,6 +214,12 @@ export default function RoomsPage() {
   const getRoomTypeLabel = (type: string) => {
     return ROOM_TYPES.find((t) => t.value === type)?.label || type;
   };
+
+  if (isMobile) {
+    return (
+      <DesktopOnlyNotice description="Room management needs a larger screen — please switch to a tablet or computer to continue." />
+    );
+  }
 
   if (loading) {
     return (

@@ -219,6 +219,18 @@ export interface SolverConfig {
   // Total periods per day (excluding breaks)
   totalPeriodsPerDay: number;
 
+  // The last period number before the break (periodsBeforeBreak). A double
+  // period can never start here — its second slot would fall right after
+  // the break, meaning the two halves aren't actually back-to-back class
+  // time.
+  breakAfterPeriod: number;
+
+  // Classes that should have their days packed to packedDayTarget periods
+  // before the solver starts a fresh day for them, rather than spreading
+  // their (lighter) weekly curriculum evenly across all 5 days.
+  packedDayClassIds: Set<string>;
+  packedDayTarget: number;
+
   // Maximum lessons per day per class
   maxLessonsPerDayPerClass: number;
 
@@ -259,6 +271,9 @@ export const DEFAULT_CONFIG: SolverConfig = {
     DayOfWeek.FRIDAY,
   ],
   totalPeriodsPerDay: 8,
+  breakAfterPeriod: 4,
+  packedDayClassIds: new Set(),
+  packedDayTarget: 8,
   maxLessonsPerDayPerClass: 8,
   maxLessonsPerDayPerTeacher: 6,
   doublePeriodConfigs: [],

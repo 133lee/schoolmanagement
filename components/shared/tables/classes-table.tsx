@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompactClassLabel } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,19 +69,6 @@ const getStatusVariant = (status: ClassStatus) => {
     default:
       return "outline";
   }
-};
-
-// Form-grade classes are already named "F1 Blue", "F2-A", etc. — the form
-// number is baked into the name, so they're self-identifying even without
-// the Grade column visible. Anything else (e.g. a bare "A") isn't, so
-// prefix it with the grade's number pulled from the grade name (e.g.
-// "Grade 10" -> "10 A").
-const formatMobileClassName = (classItem: ClassWithRelations) => {
-  const name = classItem.name;
-  if (/^f[1-5]\b/i.test(name)) return name;
-  const gradeNumber = classItem.grade?.name?.match(/\d+/)?.[0];
-  if (!gradeNumber || name.trim().startsWith(gradeNumber)) return name;
-  return `${gradeNumber} ${name}`;
 };
 
 export function ClassesTable({
@@ -171,7 +159,7 @@ export function ClassesTable({
             >
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">
-                  {formatMobileClassName(classItem)}
+                  {formatCompactClassLabel(classItem.grade?.name, classItem.name)}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {teacherName} · {classItem.currentEnrolled}/{classItem.capacity}
@@ -217,7 +205,7 @@ export function ClassesTable({
                   <TableCell>
                     <div>
                       <p className="font-semibold text-sm">
-                        {classItem.name}
+                        {formatCompactClassLabel(classItem.grade?.name, classItem.name)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Capacity: {classItem.currentEnrolled}/{classItem.capacity}

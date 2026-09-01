@@ -223,82 +223,84 @@ export function AssignmentsDashboard({
   return (
     <TooltipProvider>
       <div className="bg-background">
-        {/* Header — not sticky: the surrounding dashboard layout (desktop
-            sidebar header / mobile top bar) already provides sticky page
-            chrome, so this used to double up and visually overlap it. */}
-        <header className="bg-card border-b border-border">
-          <div className="px-4 py-4 lg:px-6">
-            <div className="hidden lg:flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-foreground">
-                  Teaching Assignments
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {departmentName} • Manage teacher-subject-class assignments
-                </p>
-              </div>
-            </div>
+        {/* Main Content — header, stats, and the tabbed card all live in the
+            same padded wrapper now so their outer edges line up exactly
+            (they used to be full-bleed bands wider than the card below). */}
+        <main className="flex-1">
+          <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+            {/* Header — not sticky: the surrounding dashboard layout (desktop
+                sidebar header / mobile top bar) already provides sticky page
+                chrome, so this used to double up and visually overlap it. */}
+            <header className="bg-card border border-border rounded-xl">
+              <div className="px-4 py-4 lg:px-6">
+                <div className="hidden lg:flex items-center justify-between mb-4">
+                  <div>
+                    <h1 className="text-2xl font-semibold text-foreground">
+                      Teaching Assignments
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {departmentName} • Manage teacher-subject-class assignments
+                    </p>
+                  </div>
+                </div>
 
-            <div className="flex gap-2 lg:flex-wrap lg:items-center lg:gap-3">
-              <div className="relative flex-1 lg:min-w-[280px] lg:max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                <div className="flex gap-2 lg:flex-wrap lg:items-center lg:gap-3">
+                  <div className="relative flex-1 lg:min-w-[280px] lg:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+
+                  <Select value={selectedTerm} onValueChange={handleTermChange}>
+                    <SelectTrigger className="w-fit lg:w-[180px]">
+                      <SelectValue placeholder="Select term" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {terms.map((term) => (
+                        <SelectItem key={term.id} value={term.id}>
+                          {term.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </header>
+
+            {/* Stats Cards */}
+            <div className="rounded-xl border border-border bg-secondary/30 px-4 py-4 lg:px-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard
+                  label="Total Assignments"
+                  value={stats.totalAssignments}
+                  icon={Grid3X3}
+                  color="primary"
+                />
+                <StatCard
+                  label="Assigned"
+                  value={stats.assignedCount}
+                  icon={GraduationCap}
+                  color="success"
+                />
+                <StatCard
+                  label="Unassigned"
+                  value={stats.unassignedCount}
+                  icon={BookOpen}
+                  color="destructive"
+                />
+                <StatCard
+                  label="Teachers"
+                  value={stats.teacherCount}
+                  icon={Users}
+                  color="accent"
                 />
               </div>
-
-              <Select value={selectedTerm} onValueChange={handleTermChange}>
-                <SelectTrigger className="w-fit lg:w-[180px]">
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                  {terms.map((term) => (
-                    <SelectItem key={term.id} value={term.id}>
-                      {term.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
-          </div>
-        </header>
 
-        {/* Stats Cards */}
-        <div className="px-4 py-4 lg:px-6 border-b border-border bg-secondary/30">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard
-              label="Total Assignments"
-              value={stats.totalAssignments}
-              icon={Grid3X3}
-              color="primary"
-            />
-            <StatCard
-              label="Assigned"
-              value={stats.assignedCount}
-              icon={GraduationCap}
-              color="success"
-            />
-            <StatCard
-              label="Unassigned"
-              value={stats.unassignedCount}
-              icon={BookOpen}
-              color="destructive"
-            />
-            <StatCard
-              label="Teachers"
-              value={stats.teacherCount}
-              icon={Users}
-              color="accent"
-            />
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <main className="flex-1">
-          <div className="p-4 lg:p-6">
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}

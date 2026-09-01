@@ -63,6 +63,7 @@ import { useGrades } from "@/hooks/useGrades";
 import { PromotionStatus } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 
 function formatTermLabel(termType: string): string {
   return termType.replace(/^TERM_(\d+)$/, (_, n) => `Term ${n}`);
@@ -87,6 +88,11 @@ export default function AdminReportCardsPage() {
   const [bulkGenerateDialogOpen, setBulkGenerateDialogOpen] = useState(false);
   const [bulkDownloadDialogOpen, setBulkDownloadDialogOpen] = useState(false);
   const [notifyParentsDialogOpen, setNotifyParentsDialogOpen] = useState(false);
+
+  // Mobile-only: which of the row filters is currently focused/open.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "grade" | "class" | "term" | "year" | "status" | null
+  >(null);
 
   const { grades, isLoading: gradesLoading } = useGrades();
   const { classes: allClasses, isLoading: classesLoading } = useClasses({ mode: "all" }, { page: 1, pageSize: 10 });
@@ -185,15 +191,16 @@ export default function AdminReportCardsPage() {
       {/* Page Header — title hidden on mobile (MobileAdminLayout's own header
           already shows the page name); Refresh also moves there via
           useMobileHeaderRefresh above instead of duplicating it inline. */}
-      <div className="flex items-center justify-between mt-2">
+      <div className="flex items-center justify-between mt-5 lg:mt-2">
         <div className="hidden lg:flex flex-col space-y-1">
           <h1 className="text-xl font-bold">Report Cards</h1>
           <p className="text-sm text-muted-foreground">Generate, view, and manage student report cards</p>
         </div>
-        {/* flex-1 so this fills the rest of the row — the internal
-            justify-between then pushes "Bulk Generate" to the true far
-            right, separate from the other (secondary) action buttons. */}
-        <div className="flex items-center justify-between flex-1 gap-2">
+        {/* flex-1 on mobile so this fills the rest of the row (title is
+            hidden there); on desktop it must NOT grow, or its own internal
+            justify-between spreads the action buttons apart instead of
+            grouping them together opposite the title. */}
+        <div className="flex items-center justify-between flex-1 gap-2 lg:flex-none lg:justify-start">
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="ghost"
@@ -224,7 +231,115 @@ export default function AdminReportCardsPage() {
       {/* Filters */}
       <Card>
         <CardContent className="py-4">
-          <div className="flex flex-wrap gap-3 items-center">
+          {/* ── Mobile filters: search on its own row; grade/class/term
+              share row two, year/status share row three — each pair
+              content-based grow/shrink on focus. min-w-0 on every wrapper
+              since CardContent (via Card) can put these in a grid ancestor
+              that would otherwise let long option text push them past the
+              card's edge. ─────────────────────────────────────────────── */}
+          <div className="flex flex-col gap-2 lg:hidden min-w-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search students..."
+                className="pl-9 h-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "grade" ? "flex-none max-w-[70%]" : "flex-1")}>
+                <Select value={gradeFilter} onValueChange={handleGradeChange} disabled={gradesLoading} onOpenChange={(open) => setActiveMobileFilter(open ? "grade" : null)}>
+                  <SelectTrigger className={cn("h-9", activeMobileFilter === "grade" ? "w-fit max-w-full" : "w-full")}>
+                    <SelectValue placeholder="Grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grades</SelectItem>
+                    {grades.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "class" ? "flex-none max-w-[70%]" : "flex-1")}>
+                <Select
+                  value={classFilter}
+                  onValueChange={setClassFilter}
+                  disabled={classesLoading || gradeFilter === "all"}
+                  onOpenChange={(open) => setActiveMobileFilter(open ? "class" : null)}
+                >
+                  <SelectTrigger className={cn("h-9", activeMobileFilter === "class" ? "w-fit max-w-full" : "w-full")}>
+                    <SelectValue placeholder={gradeFilter === "all" ? "Pick grade" : "Class"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Classes</SelectItem>
+                    {filteredClasses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {formatCompactClassLabel(grades.find((g) => g.id === c.gradeId)?.name, c.name)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "term" ? "flex-none max-w-[70%]" : "flex-1")}>
+                <Select value={termFilter} onValueChange={setTermFilter} disabled={termsLoading} onOpenChange={(open) => setActiveMobileFilter(open ? "term" : null)}>
+                  <SelectTrigger className={cn("h-9", activeMobileFilter === "term" ? "w-fit max-w-full" : "w-full")}>
+                    <SelectValue placeholder="Term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Terms</SelectItem>
+                    {terms.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {formatTermLabel(t.termType)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "year" ? "flex-none max-w-[70%]" : "flex-1")}>
+                <Select value={academicYearFilter} onValueChange={setAcademicYearFilter} disabled={academicYearsLoading} onOpenChange={(open) => setActiveMobileFilter(open ? "year" : null)}>
+                  <SelectTrigger className={cn("h-9", activeMobileFilter === "year" ? "w-fit max-w-full" : "w-full")}>
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {academicYears.map((y) => (
+                      <SelectItem key={y.id} value={y.id}>{y.year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "status" ? "flex-none max-w-[70%]" : "flex-1")}>
+                <Select
+                  value={promotionStatusFilter}
+                  onValueChange={(v) => setPromotionStatusFilter(v as PromotionStatus | "all")}
+                  onOpenChange={(open) => setActiveMobileFilter(open ? "status" : null)}
+                >
+                  <SelectTrigger className={cn("h-9", activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full")}>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value={PromotionStatus.PROMOTED}>Promoted</SelectItem>
+                    <SelectItem value={PromotionStatus.REPEATED}>Repeated</SelectItem>
+                    <SelectItem value={PromotionStatus.GRADUATED}>Graduated</SelectItem>
+                    <SelectItem value={PromotionStatus.TRANSFERRED}>Transferred</SelectItem>
+                    <SelectItem value={PromotionStatus.WITHDRAWN}>Withdrawn</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-muted-foreground self-start">
+                Clear filters
+              </Button>
+            )}
+          </div>
+
+          {/* ── Desktop filters — unchanged ──────────────────────────────── */}
+          <div className="hidden lg:flex flex-wrap gap-3 items-center">
             <div className="relative flex-1 min-w-[200px] max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -259,7 +374,7 @@ export default function AdminReportCardsPage() {
                 <SelectItem value="all">All Classes</SelectItem>
                 {filteredClasses.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {grades.find((g) => g.id === c.gradeId)?.name} {c.name}
+                    {formatCompactClassLabel(grades.find((g) => g.id === c.gradeId)?.name, c.name)}
                   </SelectItem>
                 ))}
               </SelectContent>

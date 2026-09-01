@@ -48,40 +48,54 @@ export function UsersListTable({
 }: UsersListTableProps) {
   if (isLoading) {
     return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Login</TableHead>
-              <TableHead className="text-right">Overrides</TableHead>
-              <TableHead className="w-8" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-9 w-9 rounded-full" />
-                    <div className="space-y-1.5">
-                      <Skeleton className="h-3.5 w-32" />
-                      <Skeleton className="h-3 w-44" />
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell><Skeleton className="h-5 w-24 rounded-full" /></TableCell>
-                <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="h-5 w-8 ml-auto rounded-full" /></TableCell>
-                <TableCell />
+      <>
+        <div className="lg:hidden space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+              <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-3 w-44" />
+                <Skeleton className="h-4 w-20 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden lg:block rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Login</TableHead>
+                <TableHead className="text-right">Overrides</TableHead>
+                <TableHead className="w-8" />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-3.5 w-32" />
+                        <Skeleton className="h-3 w-44" />
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell><Skeleton className="h-5 w-24 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-5 w-8 ml-auto rounded-full" /></TableCell>
+                  <TableCell />
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </>
     );
   }
 
@@ -94,7 +108,62 @@ export function UsersListTable({
   }
 
   return (
-    <div className="rounded-md border">
+    <>
+      {/* Mobile: tappable card rows */}
+      <div className="lg:hidden space-y-2">
+        {users.map((user) => {
+          const style = ROLE_STYLE[user.role];
+          const name = user.profile
+            ? `${user.profile.firstName} ${user.profile.lastName}`
+            : user.email;
+          const initials = user.profile
+            ? `${user.profile.firstName[0]}${user.profile.lastName[0]}`.toUpperCase()
+            : user.email.slice(0, 2).toUpperCase();
+
+          return (
+            <div
+              key={user.id}
+              onClick={() => onUserSelect(user.id)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                selectedUserId === user.id ? "bg-muted/60 border-primary/30" : "hover:bg-muted/40"
+              )}
+            >
+              <Avatar className="h-9 w-9 shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  {user.isActive ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold", style?.className)}>
+                    {style?.label ?? user.role}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">{formatLastLogin(user.lastLogin)}</span>
+                  {user.userPermissions.length > 0 && (
+                    <Badge variant="secondary" className="text-[11px] h-4 px-1.5">
+                      {user.userPermissions.length}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden lg:block rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -184,6 +253,7 @@ export function UsersListTable({
           })}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </>
   );
 }

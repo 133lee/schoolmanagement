@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, AlertCircle, Calendar } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -138,7 +138,7 @@ export function ViewBySubject({
                               variant="secondary"
                               className="text-xs font-medium"
                             >
-                              {cls?.grade} {cls?.name}
+                              {cls && formatCompactClassLabel(cls.grade, cls.name)}
                             </Badge>
                             {isAssigned ? (
                               <CheckCircle2 className="h-4 w-4 text-green-500" />

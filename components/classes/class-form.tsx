@@ -36,7 +36,7 @@ const classFormSchema = z.object({
   capacity: z
     .number()
     .min(1, "Capacity must be at least 1")
-    .max(100, "Capacity cannot exceed 100"),
+    .max(500, "Capacity cannot exceed 500"),
   status: z.nativeEnum(ClassStatus),
 });
 

@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { format } from "date-fns";
 import {
-  Calendar,
   ChevronLeft,
   ClipboardList,
   Clock,
@@ -14,6 +13,9 @@ import {
   X,
   Loader2,
   Search,
+  NotebookPen,
+  GraduationCap,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatClassLabel } from "@/lib/utils";
@@ -31,6 +33,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -58,6 +68,18 @@ interface ExistingRecord {
   studentId: string;
   status: AttendanceStatus;
   remarks?: string | null;
+}
+
+interface LessonLogData {
+  id: string;
+  topic: string;
+  subtopics?: string | null;
+}
+
+interface RemedialAbsentee {
+  id: string;
+  name: string;
+  studentNumber: string;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -143,6 +165,16 @@ export default function AttendancePage() {
 
   // ── Session register sheet ─────────────────────────────────────────────────
   const [registerOpen, setRegisterOpen] = useState(false);
+
+  // ── Lesson log + remedial list ──────────────────────────────────────────────
+  const [lessonLog, setLessonLog] = useState<LessonLogData | null>(null);
+  const [remedialAbsentees, setRemedialAbsentees] = useState<RemedialAbsentee[]>([]);
+  const [remedialLoading, setRemedialLoading] = useState(false);
+  const [logDialogOpen, setLogDialogOpen] = useState(false);
+  const [logTopic, setLogTopic] = useState("");
+  const [logSubtopics, setLogSubtopics] = useState("");
+  const [loggingLesson, setLoggingLesson] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // ── Fetch timetable + active term on mount ─────────────────────────────────
   useEffect(() => {
@@ -258,6 +290,37 @@ export default function AttendancePage() {
       .finally(() => setStudentsLoading(false));
   }, [selectedSlot, selectedDate]);
 
+  // ── Lesson log + remedial view for the selected slot/date ──────────────────
+  const refreshRemedial = useCallback(async () => {
+    if (!selectedSlot) {
+      setLessonLog(null);
+      setRemedialAbsentees([]);
+      return;
+    }
+    setRemedialLoading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const dateStr = toDateStr(selectedDate);
+      const res = await fetch(
+        `/api/teacher/attendance/remedial?timetableSlotId=${selectedSlot.id}&date=${dateStr}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json();
+      if (json.success) {
+        setLessonLog(json.data.log ?? null);
+        setRemedialAbsentees(json.data.absentees ?? []);
+      }
+    } catch {
+      // Non-critical — the remedial card just won't show; don't block the page.
+    } finally {
+      setRemedialLoading(false);
+    }
+  }, [selectedSlot, selectedDate]);
+
+  useEffect(() => {
+    refreshRemedial();
+  }, [refreshRemedial]);
+
   // ── Date change → deselect slot + reset mobile to period list ─────────────
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedDate(new Date(e.target.value + "T00:00:00"));
@@ -350,6 +413,9 @@ export default function AttendancePage() {
         [selectedSlot.id]: students.length,
       }));
 
+      // New ABSENT records may now exist — refresh the remedial list.
+      refreshRemedial();
+
       // ── Double-period auto-fill ────────────────────────────────────────────
       // Only fires when saving the FIRST half of a double and the second half
       // hasn't been independently marked yet — so teacher overrides are safe.
@@ -381,6 +447,84 @@ export default function AttendancePage() {
     }
   };
 
+  // ── Log this lesson ─────────────────────────────────────────────────────────
+  const openLogDialog = () => {
+    setLogTopic(lessonLog?.topic ?? "");
+    setLogSubtopics(lessonLog?.subtopics ?? "");
+    setLogDialogOpen(true);
+  };
+
+  const handleLogLesson = async () => {
+    if (!selectedSlot) return;
+    if (!logTopic.trim()) {
+      toast.error("Enter what topic was covered");
+      return;
+    }
+
+    setLoggingLesson(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch("/api/lesson-logs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          timetableSlotId: selectedSlot.id,
+          date: toDateStr(selectedDate),
+          topic: logTopic.trim(),
+          subtopics: logSubtopics.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Failed to log lesson");
+
+      setLessonLog(json.data.log);
+      toast.success("Lesson logged");
+      setLogDialogOpen(false);
+      refreshRemedial();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to log lesson");
+    } finally {
+      setLoggingLesson(false);
+    }
+  };
+
+  // ── Remedial list PDF ────────────────────────────────────────────────────────
+  const handleDownloadRemedialPdf = async () => {
+    if (!selectedSlot) return;
+    setDownloadingPdf(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const dateStr = toDateStr(selectedDate);
+      const res = await fetch(
+        `/api/teacher/attendance/remedial-pdf?timetableSlotId=${selectedSlot.id}&date=${dateStr}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to generate remedial list");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const contentDisposition = res.headers.get("Content-Disposition");
+      a.download = contentDisposition
+        ? contentDisposition.split("filename=")[1]?.replace(/"/g, "")
+        : `remedial_list_${toDateStr(selectedDate)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to download remedial list");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   // Shared period-card renderer (used in both mobile + desktop period lists)
@@ -401,7 +545,9 @@ export default function AttendancePage() {
       ) : !dayKey ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
-            <Calendar className="h-8 w-8 opacity-25" />
+            <span className="flex items-center justify-center h-8 w-8 rounded-full border-2 border-border text-sm font-bold">
+              W
+            </span>
             <p className="text-sm">No classes on weekends</p>
           </CardContent>
         </Card>
@@ -509,6 +655,7 @@ export default function AttendancePage() {
     }
 
     return (
+      <>
       <Card className={cn("flex flex-col", cardClassName)}>
         {/* Card header */}
         <CardHeader className="shrink-0 pb-3">
@@ -548,6 +695,18 @@ export default function AttendancePage() {
                 </div>
               )}
             </div>
+
+            {/* Log this lesson */}
+            <Button
+              variant={lessonLog ? "secondary" : "outline"}
+              size="sm"
+              className="h-8 text-xs w-fit"
+              onClick={openLogDialog}
+              disabled={remedialLoading}
+            >
+              <NotebookPen className="h-3.5 w-3.5 mr-1.5" />
+              {lessonLog ? "Lesson logged — edit" : "Log this lesson"}
+            </Button>
 
             {/* Search */}
             {!studentsLoading && students.length > 0 && (
@@ -730,6 +889,57 @@ export default function AttendancePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Remedial list — auto-derived: a topic was logged for this period
+          AND at least one student was marked ABSENT for it. Not shown
+          otherwise, so it never appears as an empty/confusing card. ──────── */}
+      {!remedialLoading && lessonLog && remedialAbsentees.length > 0 && (
+        <Card className="border-amber-200 dark:border-amber-800/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2 min-w-0">
+                <GraduationCap className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <CardTitle className="text-sm">
+                    Remedial — {remedialAbsentees.length} student{remedialAbsentees.length === 1 ? "" : "s"} to catch up
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Missed: <span className="font-medium text-foreground">{lessonLog.topic}</span>
+                    {lessonLog.subtopics ? ` — ${lessonLog.subtopics}` : ""}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs shrink-0"
+                onClick={handleDownloadRemedialPdf}
+                disabled={downloadingPdf}
+              >
+                {downloadingPdf ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                PDF
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-1.5">
+              {remedialAbsentees.map((s) => (
+                <span
+                  key={s.id}
+                  className="px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-xs font-medium"
+                >
+                  {s.name}
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </>
     );
   };
 
@@ -844,6 +1054,45 @@ export default function AttendancePage() {
         slots={allSlots}
         termId={activeTermId}
       />
+
+      {/* ── Log this lesson ─────────────────────────────────────────────────────── */}
+      <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Log this lesson</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="log-topic">Topic</Label>
+              <Input
+                id="log-topic"
+                placeholder="e.g. Photosynthesis"
+                value={logTopic}
+                onChange={(e) => setLogTopic(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="log-subtopics">Subtopic(s) (optional)</Label>
+              <Textarea
+                id="log-subtopics"
+                placeholder="e.g. Light-dependent reactions, chlorophyll structure"
+                value={logSubtopics}
+                onChange={(e) => setLogSubtopics(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLogDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleLogLesson} disabled={loggingLesson}>
+              {loggingLesson && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
+import { formatTeacherLabel } from '@/lib/utils';
 
 // Define types
 interface TimetableSlot {
@@ -33,6 +34,9 @@ interface TimetablePDFProps {
     isBreak: boolean;
   }>;
   generatedDate?: string;
+  schoolName?: string;
+  schoolMotto?: string;
+  logoUrl?: string;
 }
 
 // Day constants - explicit bidirectional mapping (BULLETPROOF)
@@ -68,8 +72,24 @@ const createStyles = (periodCount: number) => {
       marginBottom: 15,
       alignItems: 'center',
     },
+    logo: {
+      width: 40,
+      height: 40,
+      marginBottom: 4,
+    },
+    schoolName: {
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    schoolMotto: {
+      fontSize: 9,
+      fontStyle: 'italic',
+      color: '#444',
+      marginTop: 1,
+      marginBottom: 6,
+    },
     title: {
-      fontSize: 24,
+      fontSize: 20,
       fontWeight: 'bold',
       marginBottom: 5,
     },
@@ -184,6 +204,9 @@ export const TimetablePDF: React.FC<TimetablePDFProps> = ({
   slots,
   periodSlots,
   generatedDate = new Date().toLocaleDateString('en-GB'),
+  schoolName,
+  schoolMotto,
+  logoUrl,
 }) => {
   // GUARD 1: Check for null/undefined inputs
   if (!slots || !periodSlots) {
@@ -247,13 +270,7 @@ export const TimetablePDF: React.FC<TimetablePDFProps> = ({
     return `${p.startTime}-${p.endTime}`;
   };
 
-  // Helper to get teacher display code (SAFE)
-  const getTeacherCode = (teacher: TimetableSlot['teacher'] | null | undefined): string => {
-    if (!teacher) return '';
-    if (teacher.staffNumber) return String(teacher.staffNumber).toUpperCase();
-    if (teacher.lastName) return String(teacher.lastName).substring(0, 3).toUpperCase();
-    return '';
-  };
+  const getTeacherCode = formatTeacherLabel;
 
   // Helper to get subject display code (SAFE)
   const getSubjectCode = (subject: TimetableSlot['subject'] | null | undefined): string => {
@@ -271,6 +288,9 @@ export const TimetablePDF: React.FC<TimetablePDFProps> = ({
       <Page size="A4" orientation="landscape" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
+          {logoUrl && <Image style={styles.logo} src={logoUrl} />}
+          {schoolName && <Text style={styles.schoolName}>{schoolName}</Text>}
+          {schoolMotto && <Text style={styles.schoolMotto}>{schoolMotto}</Text>}
           <Text style={styles.title}>{className || 'Class Timetable'}</Text>
         </View>
 
@@ -331,7 +351,7 @@ export const TimetablePDF: React.FC<TimetablePDFProps> = ({
         {/* Footer - NO absolute positioning */}
         <View style={styles.footer}>
           <Text>Generated: {generatedDate}</Text>
-          <Text>School Management System</Text>
+          <Text>{schoolName || 'School Management System'}</Text>
         </View>
       </Page>
     </Document>

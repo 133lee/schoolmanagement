@@ -294,6 +294,7 @@ export default function HodAssessmentsPage() {
                     <Skeleton className="h-3 w-40" />
                   </div>
                   <Skeleton className="h-4 w-16 hidden sm:block" />
+                  <Skeleton className="h-5 w-16 rounded-full hidden sm:block" />
                   <Skeleton className="h-4 w-20 hidden sm:block" />
                 </div>
               ))}

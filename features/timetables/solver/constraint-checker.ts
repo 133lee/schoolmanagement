@@ -115,6 +115,16 @@ export function checkDoublePeriodFits(
     };
   }
 
+  // A double period can't start on the last period before the break — its
+  // second slot would fall right after the break, so the two halves
+  // wouldn't actually be consecutive class time.
+  if (slot.periodNumber === config.breakAfterPeriod) {
+    return {
+      satisfied: false,
+      reason: `Double period cannot fit - period ${slot.periodNumber} is immediately before the break`,
+    };
+  }
+
   return { satisfied: true };
 }
 
@@ -210,6 +220,37 @@ export function checkTeacherMaxLessonsPerDay(
 }
 
 /**
+ * A class cannot have the same subject scheduled more than once per day —
+ * whether the existing occurrence is a single or a double period. Without
+ * this as a hard rule, the day-packing preference (scorePackedDay) can
+ * out-vote the soft same-subject-spread preference (scoreSubjectSpread)
+ * and stack multiple double-period blocks of the same subject back-to-back
+ * on one day instead of spreading them across the week.
+ */
+export function checkSubjectNotAlreadyOnDay(
+  activity: Activity,
+  slot: Slot,
+  state: TimetableState
+): HardConstraintResult {
+  const daySchedule = state.classSchedule.get(activity.classId)?.get(slot.dayOfWeek);
+  if (!daySchedule) {
+    return { satisfied: true };
+  }
+
+  for (const placedActivityId of daySchedule.values()) {
+    const placement = state.placements.find(p => p.activityId === placedActivityId);
+    if (placement && placement.activity.subjectId === activity.subjectId) {
+      return {
+        satisfied: false,
+        reason: `${activity.subjectId} is already scheduled for this class on ${slot.dayOfWeek}`,
+      };
+    }
+  }
+
+  return { satisfied: true };
+}
+
+/**
  * Run all hard constraint checks
  */
 export function checkAllHardConstraints(
@@ -226,6 +267,7 @@ export function checkAllHardConstraints(
     checkTeacherAvailability(activity, slot, availabilities),
     checkClassMaxLessonsPerDay(activity, slot, state, config),
     checkTeacherMaxLessonsPerDay(activity, slot, state, config),
+    checkSubjectNotAlreadyOnDay(activity, slot, state),
   ];
 
   for (const check of checks) {
@@ -440,6 +482,85 @@ export function scoreAvoidSameTimeSlot(
 }
 
 /**
+ * Reward placements that extend a class's already-occupied periods that day,
+ * rather than starting a new isolated block elsewhere in the day. Without
+ * this, a period can end up permanently empty for every class on every day
+ * — not because anything blocks it, but because nothing in the scoring ever
+ * favored filling it over starting a fresh block next to a more "preferred"
+ * period (e.g. the double-period-heavy pairs that cluster on either side of
+ * the break, stranding the single period right after it).
+ * For double periods, the span's start and end are both compared against
+ * their outside neighbor so a double is scored the same way a single is.
+ */
+export function scoreCompactDay(
+  activity: Activity,
+  slot: Slot,
+  state: TimetableState
+): SoftConstraintResult {
+  const classDaySchedule = state.classSchedule
+    .get(activity.classId)
+    ?.get(slot.dayOfWeek);
+
+  // Nothing placed yet this day — no gap to create either way.
+  if (!classDaySchedule || classDaySchedule.size === 0) {
+    return { score: 100, reason: 'First activity of the day for this class' };
+  }
+
+  const spanEnd = activity.isDoublePeriod ? slot.periodNumber + 1 : slot.periodNumber;
+  const beforeOccupied = classDaySchedule.has(slot.periodNumber - 1);
+  const afterOccupied = classDaySchedule.has(spanEnd + 1);
+
+  if (beforeOccupied || afterOccupied) {
+    return { score: 100, reason: 'Extends an existing block — keeps the day compact' };
+  }
+
+  return { score: 30, reason: 'Starts a new isolated block — risks leaving a gap' };
+}
+
+/**
+ * For classes flagged in config.packedDayClassIds (Form 1/2 — lighter
+ * curriculum than Grade 10-12), prefer filling a day the class has already
+ * started up to packedDayTarget periods before spreading into a fresh,
+ * untouched day. Without this, a light curriculum spreads thin across all
+ * 5 days (e.g. one day at 6 periods, another at only 2) instead of packing
+ * into fewer, fuller days.
+ */
+export function scorePackedDay(
+  activity: Activity,
+  slot: Slot,
+  state: TimetableState,
+  config: SolverConfig
+): SoftConstraintResult {
+  if (!config.packedDayClassIds.has(activity.classId)) {
+    return { score: 100, reason: 'Not a packed-day class' };
+  }
+
+  const classSchedule = state.classSchedule.get(activity.classId);
+  const thisDayCount = classSchedule?.get(slot.dayOfWeek)?.size ?? 0;
+
+  // Already building on this day — always fine, including once it's past
+  // the target (the hard capacity check elsewhere still applies).
+  if (thisDayCount > 0) {
+    return { score: 100, reason: 'Continuing an already-active day' };
+  }
+
+  // This day is untouched by the class so far. If another day the class
+  // already uses is still under the pack target, prefer filling that one
+  // first instead of spreading into this fresh day.
+  if (classSchedule) {
+    for (const day of config.schoolDays) {
+      if (day === slot.dayOfWeek) continue;
+      const count = classSchedule.get(day)?.size ?? 0;
+      if (count > 0 && count < config.packedDayTarget) {
+        return { score: 2, reason: 'Another day still needs packing before starting a new one' };
+      }
+    }
+  }
+
+  return { score: 100, reason: 'No partially-packed day available to prefer instead' };
+}
+
+/**
  * Calculate total soft constraint score for a slot
  */
 export function calculateSoftScore(
@@ -453,11 +574,13 @@ export function calculateSoftScore(
     scoreMorningPreference(activity, slot, config),
     scoreTeacherBalance(activity, slot, state, config),
     scoreAvoidConsecutiveDays(activity, slot, state, config),
-    scoreAvoidSameTimeSlot(activity, slot, state, config), // NEW: Promote time slot variety
+    scoreAvoidSameTimeSlot(activity, slot, state, config), // Promote time slot variety
+    scoreCompactDay(activity, slot, state), // Fill gaps instead of leaving periods empty
+    scorePackedDay(activity, slot, state, config), // Pack Form classes' days before spreading thin
   ];
 
-  // Weighted average - give more weight to time slot variety
-  const weights = [1.0, 1.0, 1.0, 1.0, 2.0]; // Double weight for time slot variety
+  // Weighted average - give more weight to time slot variety and day compactness
+  const weights = [1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 5.0];
   const weightedTotal = scores.reduce((sum, s, i) => sum + s.score * weights[i], 0);
   const totalWeight = weights.reduce((sum, w) => sum + w, 0);
   return weightedTotal / totalWeight;

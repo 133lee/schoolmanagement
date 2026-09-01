@@ -54,6 +54,7 @@ import { useTeachers } from "@/hooks/useTeachers";
 import { StaffStatus, Gender, QualificationLevel } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,6 +87,11 @@ export default function TeachersManagement() {
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [teacherToReset, setTeacherToReset] = useState<any>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Mobile-only: which of the row-one filters is currently focused/open.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "status" | "gender" | null
+  >(null);
 
   // Use the teachers hook with filters and pagination
   const { teachers, meta, isLoading, error, refetch, deleteTeacher } =
@@ -223,18 +229,21 @@ export default function TeachersManagement() {
 
   return (
     <div className="px-4 lg:px-0 space-y-6">
-      {/* Page Header — title/description hidden on mobile, actions stay */}
-      <div className="flex items-start justify-between mt-2">
+      {/* Page Header — title/description hidden on mobile, actions stay.
+          Extra top margin on mobile since the buttons become the first
+          visible thing under the sticky top bar once the title is hidden. */}
+      <div className="flex items-start justify-between mt-5 lg:mt-2">
         <div className="hidden lg:flex flex-col space-y-2">
           <h1 className="text-xl font-bold">Teachers Management</h1>
           <p className="text-muted-foreground text-sm">
             Manage teacher information and assignments
           </p>
         </div>
-        {/* flex-1 so this fills the rest of the row — the internal
-            justify-between then pushes "Add Teacher" to the true far right,
-            separate from the other action buttons. */}
-        <div className="flex items-center justify-between flex-1 gap-2">
+        {/* flex-1 on mobile so this fills the rest of the row (title is
+            hidden there); on desktop it must NOT grow, or its own internal
+            justify-between spreads the action buttons apart instead of
+            grouping them together opposite the title. */}
+        <div className="flex items-center justify-between flex-1 gap-2 lg:flex-none lg:justify-start">
           <div className="flex gap-2">
             {/* Desktop only — mobile gets an icon-only refresh next to the notification bell instead */}
             <Button
@@ -247,14 +256,20 @@ export default function TeachersManagement() {
               />
               Refresh
             </Button>
-            <Button variant="outline" disabled title="Bulk teacher import coming soon — teachers require account setup">
+            {/* Import and Send Invites are both disabled/"coming soon" —
+                dead weight on mobile, so they only show on desktop there. */}
+            <Button
+              variant="outline"
+              disabled
+              className="hidden lg:inline-flex"
+              title="Bulk teacher import coming soon — teachers require account setup">
               <Download className="h-4 w-4 mr-2" />
               Import
             </Button>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" disabled>
+                  <Button variant="outline" disabled className="hidden lg:inline-flex">
                     <Mail className="h-4 w-4 mr-2" />
                     Send Invites
                   </Button>
@@ -277,12 +292,111 @@ export default function TeachersManagement() {
       {/* Main Content */}
       <Card className="flex flex-col h-[calc(100vh-12rem)]">
         <CardHeader>
-          {/* Search grows (peer focus-within) and filters shrink to make room
-              — also fixes the qualification filter overflowing past the card
-              on narrower widths, which was a flex min-width/shrink issue, not
-              a stacking one: the search input's implicit min-width kept it
-              from shrinking enough to leave room for 3 fixed-width selects. */}
-          <div className="flex gap-3">
+          {/* ── Mobile filters: search/status/gender share row one, the
+              focused one grows by its own content, the others shrink;
+              qualification gets its own full-width row underneath. ──────── */}
+          <div className="flex lg:hidden gap-2">
+            <div
+              className={cn(
+                "relative min-w-0 transition-all duration-200",
+                activeMobileFilter === "search" ? "flex-[3]" : "flex-1"
+              )}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setActiveMobileFilter("search")}
+                onBlur={() => setActiveMobileFilter(null)}
+              />
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "status" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as StaffStatus | "all")
+                }
+                onOpenChange={(open) =>
+                  setActiveMobileFilter(open ? "status" : null)
+                }>
+                <SelectTrigger className={activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full"}>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value={StaffStatus.ACTIVE}>Active</SelectItem>
+                  <SelectItem value={StaffStatus.ON_LEAVE}>On Leave</SelectItem>
+                  <SelectItem value={StaffStatus.RETIRED}>Retired</SelectItem>
+                  <SelectItem value={StaffStatus.TERMINATED}>
+                    Terminated
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "gender" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={genderFilter}
+                onValueChange={(value) =>
+                  setGenderFilter(value as Gender | "all")
+                }
+                onOpenChange={(open) =>
+                  setActiveMobileFilter(open ? "gender" : null)
+                }>
+                <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit max-w-full" : "w-full"}>
+                  <SelectValue placeholder="Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Genders</SelectItem>
+                  <SelectItem value={Gender.MALE}>Male</SelectItem>
+                  <SelectItem value={Gender.FEMALE}>Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="lg:hidden mt-2">
+            <Select
+              value={qualificationFilter}
+              onValueChange={(value) =>
+                setQualificationFilter(value as QualificationLevel | "all")
+              }>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by Qualification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Qualifications</SelectItem>
+                <SelectItem value={QualificationLevel.CERTIFICATE}>
+                  Certificate
+                </SelectItem>
+                <SelectItem value={QualificationLevel.DIPLOMA}>
+                  Diploma
+                </SelectItem>
+                <SelectItem value={QualificationLevel.DEGREE}>
+                  Degree
+                </SelectItem>
+                <SelectItem value={QualificationLevel.MASTERS}>
+                  Masters
+                </SelectItem>
+                <SelectItem value={QualificationLevel.DOCTORATE}>
+                  PhD
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ── Desktop filters — unchanged (peer focus-within shrink/grow) ── */}
+          <div className="hidden lg:flex gap-3">
             <div className="peer relative flex-1 min-w-0 transition-all duration-300 ease-in-out focus-within:flex-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -414,6 +528,7 @@ export default function TeachersManagement() {
           ) : (
             <TeachersTable
               teachers={teachers}
+              hideStaffNumberOnMobile
               onRowClick={(teacher) => {
                 setSheetTeacherId(teacher.id);
                 setSheetOpen(true);

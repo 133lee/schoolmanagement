@@ -43,6 +43,10 @@ next-env.d.ts
 # claude code local config (may contain API keys / local paths)
 .claude/
 
+# database dumps — never belong in public/ (publicly served) or in git
+*.sql
+public/dump*
+
 # prisma generated client (rebuild with prisma generate)
 generated/
 *.dll.node

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -385,8 +386,8 @@ export default function NotificationsSettingsPage() {
 
   if (loadingSettings) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
+      <div className="space-y-4 px-4 lg:px-0">
+        <div className="flex items-center gap-4 mt-5 lg:mt-0">
           <Link href="/admin/settings"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
           <div className="space-y-1">
             <div className="h-5 w-44 bg-muted rounded animate-pulse" />
@@ -401,29 +402,33 @@ export default function NotificationsSettingsPage() {
   const activeProvider = settings?.activeProvider ?? "AFRICAS_TALKING";
 
   return (
-    <div className="space-y-5">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between mt-1">
+    <div className="space-y-5 px-4 lg:px-0">
+      {/* ── Header — title hidden on mobile (top bar shows "Notifications") ── */}
+      <div className="flex items-center justify-between mt-5 lg:mt-1">
         <Link href="/admin/settings">
-          <Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Back to Settings</Button>
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Back to Settings</span>
+            <span className="sm:hidden">Back</span>
+          </Button>
         </Link>
-        <div className="text-right">
+        <div className="hidden lg:block text-right">
           <h1 className="text-xl font-bold">Notification Settings</h1>
           <p className="text-sm text-muted-foreground">SMS gateways and message templates</p>
         </div>
       </div>
 
       <Tabs defaultValue="setup">
-        <div className="flex items-center justify-between">
-          <TabsList>
+        <div className="flex items-center justify-between gap-2">
+          <TabsList className="w-full lg:w-fit">
             <TabsTrigger value="setup" className="gap-2">
-              <Settings2 className="h-4 w-4" />Gateway Setup
+              <Settings2 className="h-4 w-4" /><span className="hidden sm:inline">Gateway Setup</span><span className="sm:hidden">Setup</span>
             </TabsTrigger>
             <TabsTrigger value="messages" className="gap-2">
-              <MessageSquare className="h-4 w-4" />Compose & Templates
+              <MessageSquare className="h-4 w-4" /><span className="hidden sm:inline">Compose & Templates</span><span className="sm:hidden">Messages</span>
             </TabsTrigger>
           </TabsList>
-          <Button onClick={() => { loadSettings(); loadLogs(); loadTemplates(); }} variant="ghost" size="icon" className="h-8 w-8">
+          <Button onClick={() => { loadSettings(); loadLogs(); loadTemplates(); }} variant="ghost" size="icon" className="h-8 w-8 shrink-0">
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -446,14 +451,14 @@ export default function NotificationsSettingsPage() {
                   <CardDescription>All outgoing messages will use this provider</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-2.5 lg:gap-3">
                     {(["SMS_GATEWAY", "AFRICAS_TALKING"] as Provider[]).map((p) => {
                       const isActive = activeProvider === p;
                       const configured = p === "SMS_GATEWAY" ? settings?.smsgateway.configured : settings?.africastalking.configured;
                       return (
                         <button key={p} onClick={() => !isActive && handleSetActive(p)}
                           disabled={savingProvider || isActive}
-                          className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left
+                          className={`flex-1 flex items-center gap-3 p-3 lg:p-4 rounded-xl border-2 transition-all text-left
                             ${isActive ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40 hover:bg-muted/50 cursor-pointer"}`}
                         >
                           {p === "SMS_GATEWAY"
@@ -505,7 +510,7 @@ export default function NotificationsSettingsPage() {
                       {settings.smsgateway.deviceId && <> · Device: <span className="font-mono">{settings.smsgateway.deviceId}</span></>}
                     </div>
                   )}
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
                       <Label className="text-xs">Username</Label>
                       <Input placeholder="from the app's Cloud Mode screen" value={gwUsername} onChange={(e) => setGwUsername(e.target.value)} className="font-mono text-xs h-9" />
@@ -582,7 +587,7 @@ export default function NotificationsSettingsPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
                       <Label className="text-xs">Username</Label>
                       <Input placeholder="your-username" value={atUsername} onChange={(e) => setAtUsername(e.target.value)} className="font-mono text-xs h-9" />
@@ -782,7 +787,7 @@ export default function NotificationsSettingsPage() {
                       <select value={selectedClassId} onChange={(e) => { setSelectedClassId(e.target.value); setConfirmStep(false); setBroadcastResult(null); }}
                         className="w-full h-9 text-sm rounded-md border bg-background px-3">
                         <option value="">— Select Class —</option>
-                        {classes.map((c) => <option key={c.id} value={c.id}>{c.gradeName} {c.name}</option>)}
+                        {classes.map((c) => <option key={c.id} value={c.id}>{formatCompactClassLabel(c.gradeName, c.name)}</option>)}
                       </select>
                     )}
 

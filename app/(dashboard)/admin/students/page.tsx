@@ -200,10 +200,12 @@ export default function StudentsPage() {
             Manage student information and enrollment
           </p>
         </div>
-        {/* flex-1 so this fills the rest of the row — the internal
-            justify-between then pushes "Add Student" to the true far right,
-            separate from the other action buttons. */}
-        <div className="flex items-center justify-between flex-1 gap-2">
+        {/* flex-1 on mobile so this fills the rest of the row (title is
+            hidden there, so this is the only visible content); on desktop
+            it must NOT grow, or its own internal justify-between spreads the
+            action buttons apart from each other instead of grouping them
+            together opposite the title. */}
+        <div className="flex items-center justify-between flex-1 gap-2 lg:flex-none lg:justify-start">
           <div className="flex gap-2">
             {/* Desktop only — mobile gets an icon-only refresh next to the notification bell instead */}
             <Button

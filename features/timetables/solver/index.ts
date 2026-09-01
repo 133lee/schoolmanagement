@@ -38,6 +38,9 @@ export {
 // Export solver
 export { solve, solveQuick } from './solver';
 
+// Export gap repair
+export { repairGaps } from './gap-repair';
+
 // Export database writer
 export {
   toTimetableSlotEntries,

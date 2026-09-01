@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/empty";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
 
 /**
  * Teacher Assessments Page
@@ -380,12 +380,16 @@ export default function TeacherAssessmentsPage() {
 
   const classTeacherAssessments = assessments.filter((a) => {
     if (!classTeacherClassIds.includes(a.class.id)) return false;
-    if (classTeacherAssignments.length > 0) {
-      return classTeacherAssignments.some(
-        (cta) => cta.classId === a.class.id && cta.subjectId === a.subject.id
-      );
-    }
-    return true;
+    // Only subjects this teacher personally teaches in their own
+    // class-teacher class — being class teacher alone isn't enough. A class
+    // teacher who doesn't teach any subject there should see nothing here,
+    // not every subject's assessments (previously fell back to showing all
+    // of them when this teacher had no subject assignment in the class at
+    // all, which leaked other teachers' assessments, e.g. Mathematics, into
+    // a class teacher's own tab).
+    return classTeacherAssignments.some(
+      (cta) => cta.classId === a.class.id && cta.subjectId === a.subject.id
+    );
   });
 
   const subjectTeacherAssessments = assessments.filter((a) =>
@@ -703,7 +707,7 @@ export default function TeacherAssessmentsPage() {
                     <SelectItem value="all">All classes</SelectItem>
                     {classes.map((classItem) => (
                       <SelectItem key={classItem.id} value={classItem.id}>
-                        {formatClassLabel(classItem.grade, classItem.name)}
+                        {formatCompactClassLabel(classItem.grade, classItem.name)}
                       </SelectItem>
                     ))}
                   </SelectContent>

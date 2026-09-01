@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import {
   downloadSessionRegisterPdf,
   type SessionRegisterPdfData,
@@ -173,7 +173,7 @@ export function SessionRegisterSheet({
       if (!map.has(s.class.id)) {
         map.set(s.class.id, {
           value: s.class.id,
-          label: formatClassLabel(s.class.grade.name, s.class.name),
+          label: formatCompactClassLabel(s.class.grade.name, s.class.name),
         });
       }
     }

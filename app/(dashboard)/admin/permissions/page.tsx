@@ -84,17 +84,18 @@ export default function PermissionsManagement() {
   const selectedUser = users?.find((u) => u.id === selectedUserId);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mt-2">
+    <div className="space-y-4 lg:space-y-6 px-4 lg:px-0">
+      {/* Header — title hidden on mobile (top bar shows "Permissions") */}
+      <div className="flex items-center justify-between mt-5 lg:mt-2">
         <Link href="/admin/settings">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Settings
+            <span className="hidden sm:inline">Back to Settings</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         </Link>
         <div className="flex items-center gap-3">
-          <div className="text-right">
+          <div className="hidden lg:block text-right">
             <h1 className="text-xl font-bold">Permissions Management</h1>
             <p className="text-sm text-muted-foreground">
               Manage user roles and permission overrides
@@ -107,7 +108,7 @@ export default function PermissionsManagement() {
       </div>
 
       {/* Main Card */}
-      <Card className="flex flex-col h-[calc(100vh-12rem)]">
+      <Card className="flex flex-col h-[calc(100vh-13rem)] lg:h-[calc(100vh-12rem)]">
         <CardContent className="p-0 flex flex-col flex-1 min-h-0">
           <Tabs
             value={activeTab}
@@ -115,24 +116,24 @@ export default function PermissionsManagement() {
             className="flex flex-col flex-1 min-h-0"
           >
             {/* Tab bar */}
-            <div className="flex items-center justify-between px-4 pt-4 pb-0 border-b shrink-0">
+            <div className="flex items-center justify-between px-2 lg:px-4 pt-2 lg:pt-4 pb-0 border-b shrink-0 overflow-x-auto">
               <TabsList className="h-9 rounded-none border-0 bg-transparent p-0 gap-1">
                 <TabsTrigger
                   value="users"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-3"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-2 lg:px-3"
                 >
-                  <ShieldCheck className="h-4 w-4 mr-1.5" />
-                  Users
+                  <ShieldCheck className="h-4 w-4 lg:mr-1.5" />
+                  <span className="hidden lg:inline">Users</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="role-assignment"
                   disabled={!selectedUserId}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-3"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-2 lg:px-3"
                 >
-                  <UserCog className="h-4 w-4 mr-1.5" />
-                  Role Assignment
+                  <UserCog className="h-4 w-4 lg:mr-1.5" />
+                  <span className="hidden lg:inline">Role Assignment</span>
                   {selectedUser && (
-                    <span className="ml-1.5 text-xs text-muted-foreground">
+                    <span className="ml-1.5 text-xs text-muted-foreground hidden lg:inline">
                       ({selectedUser.profile
                         ? `${selectedUser.profile.firstName} ${selectedUser.profile.lastName}`
                         : selectedUser.email})
@@ -142,24 +143,25 @@ export default function PermissionsManagement() {
                 <TabsTrigger
                   value="overrides"
                   disabled={!selectedUserId}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-3"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-2 lg:px-3"
                 >
-                  <Shield className="h-4 w-4 mr-1.5" />
-                  Permission Overrides
+                  <Shield className="h-4 w-4 lg:mr-1.5" />
+                  <span className="hidden lg:inline">Permission Overrides</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="active-overrides"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-3"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-9 px-2 lg:px-3 whitespace-nowrap"
                 >
-                  Active Overrides
+                  <span className="lg:hidden">Overrides</span>
+                  <span className="hidden lg:inline">Active Overrides</span>
                 </TabsTrigger>
               </TabsList>
             </div>
 
             {/* Users tab — filters live here */}
             <TabsContent value="users" className="m-0 flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b shrink-0">
-                <div className="relative flex-1">
+              <div className="flex items-center gap-2 px-3 lg:px-4 py-2.5 lg:py-3 border-b shrink-0">
+                <div className="relative flex-1 min-w-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by name, email or staff number..."
@@ -169,7 +171,7 @@ export default function PermissionsManagement() {
                   />
                 </div>
                 <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-28 lg:w-40 shrink-0">
                     <SelectValue placeholder="All Roles" />
                   </SelectTrigger>
                   <SelectContent>
@@ -182,7 +184,7 @@ export default function PermissionsManagement() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-                  <SelectTrigger className="w-36">
+                  <SelectTrigger className="w-24 lg:w-36 shrink-0">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -193,7 +195,7 @@ export default function PermissionsManagement() {
                 </Select>
               </div>
 
-              <div className="flex-1 overflow-auto px-4 py-3">
+              <div className="flex-1 overflow-auto px-3 lg:px-4 py-2.5 lg:py-3">
                 <UsersListTable
                   users={users || []}
                   isLoading={isLoading}
@@ -202,12 +204,11 @@ export default function PermissionsManagement() {
                 />
               </div>
 
-              {/* Pagination */}
+              {/* Pagination — styled to match /admin/subjects: plain
+                  numbered pagination (with ellipsis collapse), no summary
+                  text, no divider line. */}
               {!isLoading && users && users.length > 0 && meta && meta.totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t shrink-0">
-                  <p className="text-sm text-muted-foreground">
-                    {((meta.page - 1) * pageSize) + 1}–{Math.min(meta.page * pageSize, meta.total)} of {meta.total} users
-                  </p>
+                <div className="flex items-center justify-center py-2.5 lg:py-3 shrink-0">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
@@ -244,7 +245,7 @@ export default function PermissionsManagement() {
             </TabsContent>
 
             {/* Role Assignment tab */}
-            <TabsContent value="role-assignment" className="m-0 flex-1 overflow-auto p-4">
+            <TabsContent value="role-assignment" className="m-0 flex-1 overflow-auto p-3 lg:p-4">
               {selectedUser ? (
                 <RoleAssignment user={selectedUser} onUpdate={refetch} />
               ) : (
@@ -256,7 +257,7 @@ export default function PermissionsManagement() {
             </TabsContent>
 
             {/* Permission Overrides tab */}
-            <TabsContent value="overrides" className="m-0 flex-1 overflow-auto p-4">
+            <TabsContent value="overrides" className="m-0 flex-1 overflow-auto p-3 lg:p-4">
               {selectedUser ? (
                 <PermissionOverrides user={selectedUser} onUpdate={refetch} />
               ) : (
@@ -268,7 +269,7 @@ export default function PermissionsManagement() {
             </TabsContent>
 
             {/* Active Overrides tab */}
-            <TabsContent value="active-overrides" className="m-0 flex-1 overflow-auto p-4">
+            <TabsContent value="active-overrides" className="m-0 flex-1 overflow-auto p-3 lg:p-4">
               <ActiveOverrides users={users || []} isLoading={isLoading} />
             </TabsContent>
           </Tabs>

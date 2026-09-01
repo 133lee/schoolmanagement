@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 
 interface GradeOption {
   id: string;
@@ -87,12 +87,12 @@ export function AdminReportsHeader({
   // Mobile-only: which of the row-one filters is currently open, so it can
   // grow while the other(s) shrink out of its way.
   const [activeMobileFilter, setActiveMobileFilter] = useState<
-    "grade" | "class" | "subject" | null
+    "grade" | "class" | "subject" | "convention" | null
   >(null);
-  const flexFor = (key: "grade" | "class" | "subject") =>
+  const flexFor = (key: "grade" | "class" | "subject" | "convention") =>
     activeMobileFilter === key ? "flex-none max-w-[70%]" : "flex-1";
-  const triggerFor = (key: "grade" | "class" | "subject") =>
-    activeMobileFilter === key ? "w-fit" : "w-full";
+  const triggerFor = (key: "grade" | "class" | "subject" | "convention") =>
+    activeMobileFilter === key ? "w-fit max-w-full" : "w-full";
 
   const getDescription = () => {
     if (hideClassFilter) {
@@ -101,14 +101,19 @@ export function AdminReportsHeader({
         : "Select grade, subject, and term to view reports";
     }
     return selectedClassData
-      ? formatClassLabel(selectedClassData.gradeName, selectedClassData.name)
+      ? formatCompactClassLabel(selectedClassData.gradeName, selectedClassData.name)
       : "Select grade, class, and term to view reports";
   };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* min-w-0: CardHeader is display:grid, and grid items default to
+            min-width:auto (shrink-to-fit their content) — without this, this
+            child's own content (the widest select's text) could force the
+            grid track wider than the card, pushing the filters past the
+            card's edge instead of actually shrinking to fit it. */}
+        <div className="min-w-0 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col space-y-1">
             <CardTitle className="text-base">Report Filters</CardTitle>
             {/* Hidden on mobile/tablet — narrow viewports don't have room for
@@ -153,7 +158,7 @@ export function AdminReportsHeader({
                       <SelectContent>
                         {classes.map((classOption) => (
                           <SelectItem key={classOption.id} value={classOption.id}>
-                            {formatClassLabel(classOption.gradeName, classOption.name)}
+                            {formatCompactClassLabel(classOption.gradeName, classOption.name)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -176,6 +181,23 @@ export function AdminReportsHeader({
                             {subject.name}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {showConventionFilter && selectedConvention !== undefined && onConventionChange && (
+                  <div className={cn("min-w-0 transition-all duration-200", flexFor("convention"))}>
+                    <Select
+                      value={selectedConvention}
+                      onValueChange={(v) => onConventionChange(v as "standard" | "form")}
+                      onOpenChange={(open) => setActiveMobileFilter(open ? "convention" : null)}>
+                      <SelectTrigger className={triggerFor("convention")}>
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="standard">Standard Grade</SelectItem>
+                        <SelectItem value="form">Form Grade</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -235,7 +257,7 @@ export function AdminReportsHeader({
                 <SelectContent>
                   {classes.map((classOption) => (
                     <SelectItem key={classOption.id} value={classOption.id}>
-                      {formatClassLabel(classOption.gradeName, classOption.name)}
+                      {formatCompactClassLabel(classOption.gradeName, classOption.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>

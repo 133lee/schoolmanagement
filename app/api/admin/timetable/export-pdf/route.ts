@@ -6,6 +6,8 @@ import { withAuth } from "@/lib/http/with-auth";
 import { handleApiError } from "@/lib/http/error-handler";
 import { TimetablePDF } from "@/lib/pdf/timetable-pdf";
 import { timetableService } from "@/features/timetables/timetable.service";
+import { getSchoolInfo, getSchoolLogoBase64 } from "@/lib/settings/school-info-helper";
+import { formatClassLabel } from "@/lib/utils";
 import { logger } from "@/lib/logger/logger";
 import { Role } from "@/types/prisma-enums";
 import { AuthContext } from "@/lib/auth/authorization";
@@ -40,7 +42,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const teacherId = searchParams.get("teacherId");
     const exportAll = searchParams.get("exportAll") === "true";
 
-    const { periodSlots } = await timetableService.getExportContext(context);
+    const [{ periodSlots }, schoolInfo, logoBase64] = await Promise.all([
+      timetableService.getExportContext(context),
+      getSchoolInfo(),
+      getSchoolLogoBase64(),
+    ]);
 
     // CASE 1: Export all classes as ZIP
     if (exportAll) {
@@ -63,10 +69,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           }
 
           const pdfComponent = React.createElement(TimetablePDF, {
-            className: `${classItem.grade.name} ${classItem.name}`,
+            className: formatClassLabel(classItem.grade.name, classItem.name),
             slots: result.slots as any,
             periodSlots,
             generatedDate: new Date().toLocaleDateString("en-GB"),
+            schoolName: schoolInfo.name,
+            schoolMotto: schoolInfo.motto,
+            logoUrl: logoBase64 || undefined,
           });
 
           const buffer = await pdfLimiter.run(async () => {
@@ -98,7 +107,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         headers: {
           "Content-Type": "application/zip",
           "Content-Length": zipBuffer.length.toString(),
-          "Content-Disposition": `attachment; filename="all_timetables_${timestamp}.zip"`,
+          "Content-Disposition": `inline; filename="all_timetables_${timestamp}.zip"`,
           "Cache-Control": "no-cache, no-store, must-revalidate",
         },
       });
@@ -117,10 +126,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       }
 
       const pdfComponent = React.createElement(TimetablePDF, {
-        className: `${classData.grade.name} ${classData.name}`,
+        className: formatClassLabel(classData.grade.name, classData.name),
         slots: result.slots as any,
         periodSlots,
         generatedDate: new Date().toLocaleDateString("en-GB"),
+        schoolName: schoolInfo.name,
+        schoolMotto: schoolInfo.motto,
+        logoUrl: logoBase64 || undefined,
       });
 
       const pdfBuffer = await pdfLimiter.run(async () => {
@@ -143,7 +155,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Length": pdfBuffer.length.toString(),
-          "Content-Disposition": `attachment; filename="timetable_${safeClassName}_${timestamp}.pdf"`,
+          "Content-Disposition": `inline; filename="timetable_${safeClassName}_${timestamp}.pdf"`,
           "Cache-Control": "no-cache, no-store, must-revalidate",
         },
       });
@@ -166,6 +178,9 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         slots: result.slots as any,
         periodSlots,
         generatedDate: new Date().toLocaleDateString("en-GB"),
+        schoolName: schoolInfo.name,
+        schoolMotto: schoolInfo.motto,
+        logoUrl: logoBase64 || undefined,
       });
 
       const pdfBuffer = await pdfLimiter.run(async () => {
@@ -188,7 +203,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Length": pdfBuffer.length.toString(),
-          "Content-Disposition": `attachment; filename="timetable_teacher_${safeTeacherName}_${timestamp}.pdf"`,
+          "Content-Disposition": `inline; filename="timetable_teacher_${safeTeacherName}_${timestamp}.pdf"`,
           "Cache-Control": "no-cache, no-store, must-revalidate",
         },
       });

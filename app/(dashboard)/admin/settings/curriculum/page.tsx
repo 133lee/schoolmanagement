@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { formatCompactClassLabel } from "@/lib/utils";
 import Link from "next/link";
 import {
   Card,
@@ -360,8 +361,8 @@ export default function StreamCurriculumPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="space-y-1"><Skeleton className="h-7 w-40" /><Skeleton className="h-4 w-64" /></div>
+      <div className="space-y-6 px-4 lg:px-0">
+        <div className="space-y-1 mt-5 lg:mt-0"><Skeleton className="h-7 w-40" /><Skeleton className="h-4 w-64" /></div>
         <div className="flex gap-2"><Skeleton className="h-9 w-28" /><Skeleton className="h-9 w-28" /><Skeleton className="h-9 w-28" /></div>
         <Card><CardContent className="pt-5 space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -377,17 +378,18 @@ export default function StreamCurriculumPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header - Back button left, Title right */}
-      <div className="flex items-center justify-between mt-2">
+    <div className="space-y-6 px-4 lg:px-0">
+      {/* Header — title hidden on mobile (top bar shows "Curriculum") */}
+      <div className="flex items-center justify-between mt-5 lg:mt-2">
         <Link href="/admin/settings">
           <Button variant="outline" size="sm">
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Settings
+            <span className="hidden sm:inline">Back to Settings</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         </Link>
         <div className="flex items-center gap-3">
-          <div className="text-right">
+          <div className="hidden lg:block text-right">
             <h1 className="text-xl font-bold">Stream Curriculum Setup</h1>
             <p className="text-sm text-muted-foreground">
               Configure which subjects each class/stream teaches
@@ -400,9 +402,9 @@ export default function StreamCurriculumPage() {
       </div>
 
       {/* Info Banner */}
-      <div className="flex items-start gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 px-3 py-2.5 lg:px-4 lg:py-3">
         <School className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-        <p className="text-sm text-blue-800 dark:text-blue-300">
+        <p className="text-xs lg:text-sm text-blue-800 dark:text-blue-300">
           <span className="font-semibold">Stream-based curriculum.</span>{" "}
           Each class defines its own subject combination. Students enrolled in a class automatically follow that stream&apos;s curriculum.
         </p>
@@ -497,7 +499,7 @@ export default function StreamCurriculumPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="grid gap-6 lg:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         {/* Step 1 & 2: Grade and Class Selection */}
                         <Card className="lg:col-span-1 border">
                           <CardHeader className="pb-3">
@@ -559,7 +561,7 @@ export default function StreamCurriculumPage() {
                                 <SelectContent>
                                   {filteredClasses.map((cls) => (
                                     <SelectItem key={cls.id} value={cls.id}>
-                                      {selectedGradeObj?.name} {cls.name}
+                                      {formatCompactClassLabel(selectedGradeObj?.name, cls.name)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -621,18 +623,20 @@ export default function StreamCurriculumPage() {
                         {/* Step 3: Subject Selection */}
                         <Card className="lg:col-span-2 border">
                           <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                              <BookOpen className="h-4 w-4" />
-                              Subjects for{" "}
-                              {selectedClassObj
-                                ? `${selectedGradeObj?.name} ${selectedClassObj.name}`
-                                : "Selected Stream"}
+                            <CardTitle className="text-sm flex items-center gap-2 min-w-0">
+                              <BookOpen className="h-4 w-4 shrink-0" />
+                              <span className="truncate">
+                                Subjects for{" "}
+                                {selectedClassObj
+                                  ? `${selectedGradeObj?.name} ${selectedClassObj.name}`
+                                  : "Selected Stream"}
+                              </span>
                             </CardTitle>
                             <CardDescription className="text-xs">
                               Select subjects, mark as core/elective, and set periods per week
                             </CardDescription>
                           </CardHeader>
-                          <CardContent>
+                          <CardContent className="px-3 lg:px-6">
                             {!selectedClass ? (
                               <div className="text-center py-12 text-muted-foreground">
                                 <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -642,7 +646,7 @@ export default function StreamCurriculumPage() {
                               </div>
                             ) : (
                               <ScrollArea className="h-100">
-                                <div className="space-y-2 pr-4">
+                                <div className="space-y-1.5 lg:space-y-2 pr-3 lg:pr-4">
                                   {subjects.map((subject) => {
                                     const isSelected = selectedSubjects.has(
                                       subject.id
@@ -652,12 +656,12 @@ export default function StreamCurriculumPage() {
                                     return (
                                       <div
                                         key={subject.id}
-                                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 lg:p-3 rounded-lg border transition-colors ${
                                           isSelected
                                             ? "bg-primary/10 border-primary/30 dark:bg-primary/15 dark:border-primary/40"
                                             : "border-transparent hover:bg-muted/50 hover:border-border"
                                         }`}>
-                                        <div className="flex items-center gap-3 flex-1">
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
                                           <Checkbox
                                             id={`subject-${subject.id}`}
                                             checked={isSelected}
@@ -667,11 +671,11 @@ export default function StreamCurriculumPage() {
                                           />
                                           <label
                                             htmlFor={`subject-${subject.id}`}
-                                            className="flex-1 cursor-pointer">
-                                            <div className="font-medium">
+                                            className="flex-1 min-w-0 cursor-pointer">
+                                            <div className="font-medium truncate">
                                               {subject.name}
                                             </div>
-                                            <div className="text-sm text-muted-foreground">
+                                            <div className="text-sm text-muted-foreground truncate">
                                               {subject.code}
                                               {subject.department && (
                                                 <span className="ml-2">
@@ -683,7 +687,7 @@ export default function StreamCurriculumPage() {
                                         </div>
 
                                         {isSelected && (
-                                          <div className="flex items-center gap-3">
+                                          <div className="flex items-center gap-3 pl-8 sm:pl-0 shrink-0">
                                             <Checkbox
                                               id={`core-${subject.id}`}
                                               checked={isCore}

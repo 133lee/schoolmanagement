@@ -117,7 +117,7 @@ export function RoleAssignment({ user, onUpdate }: RoleAssignmentProps) {
   const isCriticalRole = user.role === "ADMIN" || user.role === "HEAD_TEACHER";
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-2">
       {/* Role Assignment Column */}
       <Card>
         <CardHeader>
@@ -126,17 +126,17 @@ export function RoleAssignment({ user, onUpdate }: RoleAssignmentProps) {
             Change the user's role to adjust their system-wide permissions
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 lg:space-y-6">
           {/* Current User Info */}
-          <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-            <Shield className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium">
+          <div className="flex items-center gap-3 p-3 lg:p-4 bg-muted/50 rounded-lg min-w-0">
+            <Shield className="h-5 w-5 text-primary shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">
                 {user.profile
                   ? `${user.profile.firstName} ${user.profile.lastName}`
                   : user.email}
               </p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
             </div>
           </div>
 
@@ -194,7 +194,7 @@ export function RoleAssignment({ user, onUpdate }: RoleAssignmentProps) {
             Default permissions granted by the selected role
           </CardDescription>
         </CardHeader>
-        <CardContent className="max-h-96 overflow-y-auto">
+        <CardContent className="max-h-64 lg:max-h-96 overflow-y-auto">
           <div className="space-y-3">
             {ROLE_PERMISSIONS[selectedRole]?.map((permission, index) => (
               <div key={index} className="flex items-center gap-2">

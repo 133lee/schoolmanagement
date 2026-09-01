@@ -23,6 +23,7 @@ import {
   calculateSoftScore,
   buildAvailabilityLookup,
 } from './constraint-checker';
+import { repairGaps } from './gap-repair';
 
 // ============================================
 // UTILITIES
@@ -466,6 +467,19 @@ export function solve(input: SolverInput): SolverOutput {
       const restartStart   = Date.now();
       let   solvedPerfectly = false;
 
+      // solveRecursive's `depth` counts activities placed so far in THIS
+      // attempt (not retries) — it's the recursion depth, not a distinct
+      // "backtrack count". A depth cap below the number of activities that
+      // must be placed makes every single attempt fail deterministically
+      // once that many activities are placed, no matter the order, so no
+      // restart could ever reach a complete solution. Never let a small
+      // caller-supplied default silently guarantee failure on real school
+      // sizes — floor it at the actual problem size plus headroom.
+      const backtrackConfig: SolverConfig = {
+        ...config,
+        maxBacktrackDepth: Math.max(config.maxBacktrackDepth, secondaryActivities.length + 10),
+      };
+
       for (let restart = 0; restart <= MAX_RESTARTS; restart++) {
         if (Date.now() - restartStart > BUDGET_MS) {
           warnings.push(
@@ -482,7 +496,7 @@ export function solve(input: SolverInput): SolverOutput {
           activities: ordered,
           slots,
           availabilities,
-          config,
+          config: backtrackConfig,
           stats: { attempts: 0, backtrackCount: 0 },
         };
 
@@ -523,20 +537,33 @@ export function solve(input: SolverInput): SolverOutput {
     }
   }
 
+  // Post-solve repair: close any remaining class-day gaps by swapping a
+  // day's trailing block with a same-span block from another day, where
+  // doing so is provably safe (see gap-repair.ts). Never touches placement
+  // count or unplacedActivities — only WHERE already-placed activities sit.
+  const { placements: repairedPlacements, repairCount } = repairGaps(
+    finalState.placements,
+    config,
+    input.periodSlots
+  );
+  if (repairCount > 0) {
+    warnings.push(`Gap repair: closed ${repairCount} class-day gap(s) via day swap.`);
+  }
+
   const duration = Date.now() - startTime;
 
   // Count double periods
-  const doublePeriodCount = finalState.placements.filter(
+  const doublePeriodCount = repairedPlacements.filter(
     p => p.activity.isDoublePeriod
   ).length;
 
   return {
     success: unplacedActivities.length === 0,
-    placements: finalState.placements,
+    placements: repairedPlacements,
     unplacedActivities,
     stats: {
       totalActivities: activities.length,
-      placedActivities: finalState.placements.length,
+      placedActivities: repairedPlacements.length,
       unplacedActivities: unplacedActivities.length,
       doublePeriodCount,
       attempts,

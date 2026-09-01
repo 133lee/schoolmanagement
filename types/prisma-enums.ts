@@ -105,6 +105,7 @@ export type {
 
   // Attendance
   AttendanceRecord,
+  LessonLog,
 
   // Timetable
   TimeSlot,

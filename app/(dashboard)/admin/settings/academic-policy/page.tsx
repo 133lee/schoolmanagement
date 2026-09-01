@@ -131,15 +131,15 @@ export default function AcademicPolicyPage() {
   // ── loading skeleton ────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between mt-1">
+      <div className="space-y-6 px-4 lg:px-0">
+        <div className="flex items-center justify-between mt-5 lg:mt-1">
           <Skeleton className="h-9 w-32" />
           <div className="flex items-center gap-3">
-            <div className="text-right space-y-1">
+            <div className="hidden lg:block text-right space-y-1">
               <Skeleton className="h-5 w-40 ml-auto" />
               <Skeleton className="h-3.5 w-56 ml-auto" />
             </div>
-            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-9 lg:w-32" />
           </div>
         </div>
         {[1, 2, 3, 4].map((i) => (
@@ -161,25 +161,33 @@ export default function AcademicPolicyPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between mt-1">
+    <div className="space-y-6 px-4 lg:px-0">
+      {/* ── Header — title hidden on mobile (top bar shows "Academic
+          Policy"); Save button becomes icon-only there instead of the
+          desktop's full-width labeled button. ─────────────────────────── */}
+      <div className="flex items-start justify-between mt-5 lg:mt-1">
         <Link href="/admin/settings">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Settings
+            <span className="hidden sm:inline">Back to Settings</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         </Link>
-        <div className="text-right space-y-2">
-          <div>
+        <div className="lg:text-right lg:space-y-2">
+          <div className="hidden lg:block">
             <h1 className="text-xl font-bold">Academic Policy</h1>
             <p className="text-sm text-muted-foreground">
               Student progression rules and pass criteria
             </p>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="w-full">
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            size="icon"
+            className="lg:h-9 lg:w-full lg:px-4 lg:py-2"
+          >
+            <Save className="h-4 w-4 lg:mr-2" />
+            <span className="hidden lg:inline">{saving ? "Saving..." : "Save Changes"}</span>
           </Button>
         </div>
       </div>
@@ -196,9 +204,9 @@ export default function AcademicPolicyPage() {
             or require manual approval
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 lg:space-y-6">
           {/* Auto promotion toggle */}
-          <div className="flex items-start justify-between gap-6">
+          <div className="flex items-start justify-between gap-3 lg:gap-6">
             <div className="space-y-0.5">
               <Label className="text-sm font-medium">Automatic Promotion</Label>
               <p className="text-sm text-muted-foreground">
@@ -252,7 +260,7 @@ export default function AcademicPolicyPage() {
             (Excellent · Very Good · Good · Average · Pass · Needs Improvement).
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 lg:space-y-6">
           {/* Quality */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
@@ -277,7 +285,7 @@ export default function AcademicPolicyPage() {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
               Quantity — number of subjects
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
               <NumberField
                 id="primary_min_passed"
                 label="Minimum Subjects Passed"
@@ -319,7 +327,7 @@ export default function AcademicPolicyPage() {
             Both levels share the same promotion criteria since they use compatible grading scales.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 lg:space-y-6">
           {/* Quality */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
@@ -344,7 +352,7 @@ export default function AcademicPolicyPage() {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
               Quantity — number of subjects
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
               <NumberField
                 id="secondary_min_passed"
                 label="Minimum Subjects Passed"
@@ -381,7 +389,7 @@ export default function AcademicPolicyPage() {
             Minimum attendance a student must maintain to be eligible for promotion
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 lg:space-y-6">
           <NumberField
             id="min_attendance"
             label="Minimum Attendance Percentage"
@@ -395,7 +403,7 @@ export default function AcademicPolicyPage() {
 
           <Separator />
 
-          <div className="flex items-start justify-between gap-6">
+          <div className="flex items-start justify-between gap-3 lg:gap-6">
             <div className="space-y-0.5">
               <Label className="text-sm font-medium">Block Promotion on Low Attendance</Label>
               <p className="text-sm text-muted-foreground">

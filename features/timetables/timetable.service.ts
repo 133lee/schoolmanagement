@@ -57,9 +57,6 @@ export interface TimetableConfigInput {
   periodsBeforeBreak: number;
   periodsAfterBreak: number;
   totalPeriods: number;
-  allowSubjectPreferences?: boolean;
-  allowTeacherPreferences?: boolean;
-  autoAssignRooms?: boolean;
   doublePeriodConfigs?: DoublePeriodConfig[];
 }
 
@@ -292,9 +289,6 @@ export class TimetableService {
         periodsBeforeBreak: input.periodsBeforeBreak,
         periodsAfterBreak: input.periodsAfterBreak,
         totalPeriods: input.totalPeriods,
-        allowSubjectPreferences: input.allowSubjectPreferences || false,
-        allowTeacherPreferences: input.allowTeacherPreferences || false,
-        autoAssignRooms: input.autoAssignRooms !== undefined ? input.autoAssignRooms : true,
         doublePeriodConfigs: (input.doublePeriodConfigs || []) as any,
       } as any);
     } else {
@@ -315,10 +309,7 @@ export class TimetableService {
         periodsBeforeBreak: input.periodsBeforeBreak,
         periodsAfterBreak: input.periodsAfterBreak,
         totalPeriods: input.totalPeriods,
-        allowSubjectPreferences: input.allowSubjectPreferences || false,
-        allowTeacherPreferences: input.allowTeacherPreferences || false,
         doublePeriodConfigs: (input.doublePeriodConfigs || []) as any,
-        autoAssignRooms: input.autoAssignRooms !== undefined ? input.autoAssignRooms : true,
       });
     }
   }
@@ -478,13 +469,31 @@ export class TimetableService {
       throw new NotFoundError("No subject teacher assignments found for this academic year");
     }
 
-    // Get class subjects (curriculum with periodsPerWeek)
+    // Form classes (Grade 8-9 / F1-F2) carry a lighter curriculum than
+    // Grade 10-12, so their periods naturally spread thin across all 5
+    // days if left unconstrained — e.g. one day with only 2 periods used
+    // while another sits at 6. Pack their days to a minimum instead of
+    // letting the solver spread evenly; see scorePackedDay.
+    const packedDayClassIds = new Set(
+      assignments
+        .filter(a => {
+          const level = (a.class as any)?.grade?.level;
+          return level === "GRADE_8" || level === "GRADE_9";
+        })
+        .map(a => a.classId)
+    );
+
+    // Get class subjects (curriculum with periodsPerWeek). Scoped to
+    // active classes, not current enrollment — a class's timetable is
+    // built from its curriculum + teacher assignments, which are decided
+    // ahead of enrollment, so a class with 0 students enrolled so far
+    // still gets scheduled. (Previously filtered by "has an active
+    // enrollment this year", which silently dropped every assignment for
+    // any class not yet populated with students.)
     const classSubjects = await prisma.classSubject.findMany({
       where: {
         class: {
-          enrollments: {
-            some: { academicYearId },
-          },
+          status: "ACTIVE",
         },
       },
       include: {
@@ -550,6 +559,9 @@ export class TimetableService {
       config: {
         schoolDays: [DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY] as any,
         totalPeriodsPerDay: config.totalPeriods,
+        breakAfterPeriod: config.periodsBeforeBreak,
+        packedDayClassIds,
+        packedDayTarget: 8,
         maxLessonsPerDayPerClass: config.totalPeriods,
         maxLessonsPerDayPerTeacher: 6,
         doublePeriodConfigs,
@@ -647,13 +659,20 @@ export class TimetableService {
       });
     }
 
-    // Break period
+    // Break period — does NOT consume a period number. Teaching periods
+    // count continuously across it (4 periods, break, then period 5 — not
+    // period 4, break counted as period 5, then period 6). The break still
+    // needs *some* numeric value so downstream code (which reads this array
+    // in chronological order, not sorted) can identify it without colliding
+    // with a real period, so it gets the midpoint between the periods on
+    // either side of it — never a whole number, so it can never match a
+    // real period's lookup key.
     const breakStart = this.formatTime(currentMinutes);
     currentMinutes += config.breakDuration;
     const breakEnd = this.formatTime(currentMinutes);
 
     slots.push({
-      periodNumber: periodNumber++,
+      periodNumber: periodNumber - 0.5,
       startTime: breakStart,
       endTime: breakEnd,
       isBreak: true,
@@ -754,34 +773,31 @@ export class TimetableService {
     if (filters?.roomId) where.roomId = filters.roomId;
     if (filters?.dayOfWeek) where.dayOfWeek = filters.dayOfWeek;
 
-    const slots = await timetableSlotRepository.findMany({
-      where,
-      include: {
-        class: {
-          select: {
-            id: true,
-            name: true,
-            grade: {
-              select: {
-                name: true,
-              },
+    const slots = await timetableSlotRepository.findAllUnbounded(where, undefined, {
+      class: {
+        select: {
+          id: true,
+          name: true,
+          grade: {
+            select: {
+              name: true,
             },
           },
         },
-        subject: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
+      },
+      subject: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
         },
-        teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            staffNumber: true,
-          },
+      },
+      teacher: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          staffNumber: true,
         },
       },
     });
@@ -796,11 +812,13 @@ export class TimetableService {
     };
 
     const config = await timetableConfigurationRepository.findByAcademicYearId(academicYear.id);
+    const periodSlots = config ? this.generatePeriodSlots(config) : [];
 
     return {
       slots, // Add slots array for frontend
       timetable: byDay,
       configuration: config,
+      periodSlots,
       academicYear: {
         id: academicYear.id,
         year: academicYear.year,

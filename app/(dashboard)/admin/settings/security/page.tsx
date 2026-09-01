@@ -142,20 +142,19 @@ export default function SecuritySettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3"><Skeleton className="h-9 w-20" /><Skeleton className="h-7 w-44" /></div>
+      <div className="space-y-4 lg:space-y-6 px-4 lg:px-0">
+        <div className="flex items-center gap-3 mt-5 lg:mt-1"><Skeleton className="h-9 w-20" /><Skeleton className="h-7 w-44 hidden lg:block" /></div>
         {[0, 1, 2].map(i => (
-          <Card key={i}><CardContent className="pt-6 space-y-4">
+          <Card key={i}><CardContent className="pt-4 lg:pt-6 space-y-3 lg:space-y-4">
             <Skeleton className="h-5 w-36" />
             {Array.from({ length: 3 }).map((_, j) => (
-              <div key={j} className="flex items-center justify-between">
-                <div className="space-y-1"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-48" /></div>
-                <Skeleton className="h-6 w-10 rounded-full" />
+              <div key={j} className="flex items-center justify-between gap-3">
+                <div className="space-y-1 min-w-0"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-48" /></div>
+                <Skeleton className="h-6 w-10 rounded-full shrink-0" />
               </div>
             ))}
           </CardContent></Card>
         ))}
-        <Skeleton className="h-9 w-24" />
       </div>
     );
   }
@@ -163,21 +162,22 @@ export default function SecuritySettingsPage() {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/settings">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-xl font-bold">Security Settings</h1>
-            <p className="text-sm text-muted-foreground">
-              Configure password policies, authentication, and security features
-            </p>
-          </div>
+    <div className="space-y-4 lg:space-y-6 px-4 lg:px-0">
+      {/* Header — title hidden on mobile (top bar shows "Security"); no Save
+          button here since the whole page below is a disabled preview. */}
+      <div className="flex items-center gap-4 mt-5 lg:mt-1">
+        <Link href="/admin/settings">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Back to Settings</span>
+            <span className="sm:hidden">Back</span>
+          </Button>
+        </Link>
+        <div className="hidden lg:block">
+          <h1 className="text-xl font-bold">Security Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            Configure password policies, authentication, and security features
+          </p>
         </div>
       </div>
 
@@ -186,16 +186,16 @@ export default function SecuritySettingsPage() {
           encryption, backups). Disabling the whole section rather than
           leaving it interactive, since toggling any of these currently does
           nothing and would otherwise look like it does. */}
-      <Alert>
+      <Alert className="px-3 py-2.5 lg:px-4 lg:py-3">
         <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
+        <AlertDescription className="text-xs lg:text-sm">
           <strong>Not yet enforced.</strong> These settings are disabled because nothing in the
           system currently reads or applies them — changing them would have no real effect.
           This section will be re-enabled once the underlying features are actually built.
         </AlertDescription>
       </Alert>
 
-      <div className="opacity-60 pointer-events-none select-none space-y-6" aria-disabled="true">
+      <div className="opacity-60 pointer-events-none select-none space-y-4 lg:space-y-6" aria-disabled="true">
 
       {/* Password Policy */}
       <Card>
@@ -208,7 +208,7 @@ export default function SecuritySettingsPage() {
             Define password requirements for all user accounts
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 lg:space-y-4">
           <div className="space-y-2">
             <Label htmlFor="minPasswordLength">Minimum Password Length</Label>
             <Input
@@ -228,8 +228,8 @@ export default function SecuritySettingsPage() {
           <div className="space-y-3">
             <Label>Password Requirements</Label>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
                 <Label className="font-normal">Require Uppercase Letters (A-Z)</Label>
                 <p className="text-sm text-muted-foreground">
                   At least one uppercase letter
@@ -241,8 +241,8 @@ export default function SecuritySettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
                 <Label className="font-normal">Require Lowercase Letters (a-z)</Label>
                 <p className="text-sm text-muted-foreground">
                   At least one lowercase letter
@@ -254,8 +254,8 @@ export default function SecuritySettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
                 <Label className="font-normal">Require Numbers (0-9)</Label>
                 <p className="text-sm text-muted-foreground">
                   At least one numeric digit
@@ -267,8 +267,8 @@ export default function SecuritySettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
                 <Label className="font-normal">Require Special Characters (!@#$%)</Label>
                 <p className="text-sm text-muted-foreground">
                   At least one special character
@@ -294,7 +294,7 @@ export default function SecuritySettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4 pt-2">
             <div className="space-y-2">
               <Label htmlFor="passwordExpiryDays">Password Expires After (days)</Label>
               <select
@@ -341,8 +341,8 @@ export default function SecuritySettingsPage() {
             Login protection and account lockout settings
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-3 lg:space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4">
             <div className="space-y-2">
               <Label htmlFor="maxLoginAttempts">Maximum Login Attempts</Label>
               <Input
@@ -376,8 +376,8 @@ export default function SecuritySettingsPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Require Two-Factor Authentication (2FA)</Label>
               <p className="text-sm text-muted-foreground">
                 All users must enable 2FA to access the system
@@ -390,8 +390,8 @@ export default function SecuritySettingsPage() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Require 2FA for Administrators</Label>
               <p className="text-sm text-muted-foreground">
                 Admin and Head Teacher accounts must use 2FA
@@ -425,8 +425,8 @@ export default function SecuritySettingsPage() {
             Control user sessions and concurrent logins
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-3 lg:space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4">
             <div className="space-y-2">
               <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
               <select
@@ -460,8 +460,8 @@ export default function SecuritySettingsPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Force Logout on Password Change</Label>
               <p className="text-sm text-muted-foreground">
                 Automatically log out all sessions when password is changed
@@ -486,9 +486,9 @@ export default function SecuritySettingsPage() {
             Advanced security monitoring and protection
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+        <CardContent className="space-y-3 lg:space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>IP Whitelist (Coming Soon)</Label>
               <p className="text-sm text-muted-foreground">
                 Only allow access from approved IP addresses
@@ -501,8 +501,8 @@ export default function SecuritySettingsPage() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Enable Audit Log</Label>
               <p className="text-sm text-muted-foreground">
                 Record all security-sensitive actions for compliance
@@ -514,8 +514,8 @@ export default function SecuritySettingsPage() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Enable Security Alerts</Label>
               <p className="text-sm text-muted-foreground">
                 Notify administrators of security events
@@ -527,8 +527,8 @@ export default function SecuritySettingsPage() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Alert on Suspicious Activity</Label>
               <p className="text-sm text-muted-foreground">
                 Detect and alert on unusual login patterns or behavior
@@ -550,9 +550,9 @@ export default function SecuritySettingsPage() {
             Encryption, backups, and data retention policies
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+        <CardContent className="space-y-3 lg:space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Enable Data Encryption</Label>
               <p className="text-sm text-muted-foreground">
                 Encrypt sensitive data at rest and in transit
@@ -565,8 +565,8 @@ export default function SecuritySettingsPage() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
               <Label>Enable Auto Backup</Label>
               <p className="text-sm text-muted-foreground">
                 Automatically backup database on schedule

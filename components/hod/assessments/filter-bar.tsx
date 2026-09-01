@@ -52,11 +52,11 @@ export function FilterBar({
   const flexRow1 = (key: "term" | "assessmentType") =>
     activeRow1 === key ? "flex-none max-w-[70%]" : "flex-1";
   const triggerRow1 = (key: "term" | "assessmentType") =>
-    activeRow1 === key ? "w-fit" : "w-full";
+    activeRow1 === key ? "w-fit max-w-full" : "w-full";
   const flexRow2 = (key: "class" | "teacher" | "status") =>
     activeRow2 === key ? "flex-none max-w-[70%]" : "flex-1";
   const triggerRow2 = (key: "class" | "teacher" | "status") =>
-    activeRow2 === key ? "w-fit" : "w-full";
+    activeRow2 === key ? "w-fit max-w-full" : "w-full";
 
   return (
     <div className="bg-card rounded-xl p-4 shadow-sm border">

@@ -10,6 +10,7 @@ import {
   ExamType,
   AssessmentStatus,
   TermType,
+  DayOfWeek,
 } from "@prisma/client";
 
 /**
@@ -307,5 +308,31 @@ export async function createTestAssessmentResult(
 ) {
   return prisma.studentAssessmentResult.create({
     data: { studentId, assessmentId, marksObtained, isAbsent: overrides.isAbsent ?? false },
+  });
+}
+
+export async function createTestTimetableSlot(
+  classId: string,
+  subjectId: string,
+  teacherId: string,
+  academicYearId: string,
+  overrides: Partial<{
+    dayOfWeek: DayOfWeek;
+    periodNumber: number;
+    startTime: string;
+    endTime: string;
+  }> = {}
+) {
+  return prisma.timetableSlot.create({
+    data: {
+      classId,
+      subjectId,
+      teacherId,
+      academicYearId,
+      dayOfWeek: overrides.dayOfWeek ?? DayOfWeek.MONDAY,
+      periodNumber: overrides.periodNumber ?? 1,
+      startTime: overrides.startTime ?? "08:00",
+      endTime: overrides.endTime ?? "08:40",
+    },
   });
 }

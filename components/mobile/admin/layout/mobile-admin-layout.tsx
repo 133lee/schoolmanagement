@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { RefreshCw, User } from "lucide-react";
 import { AdminBottomNav } from "./bottom-nav";
 import { MobileAdminDrawer } from "./mobile-drawer";
 import { NotificationBell } from "@/components/teacher/notification-bell";
@@ -17,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/students":                "Students",
   "/admin/teachers":                "Teachers",
   "/admin/classes":                 "Classes",
+  "/admin/promotions":              "Promotions",
   "/admin/departments":             "Departments",
   "/admin/subjects":                "Subjects",
   "/admin/parents":                 "Parents",
@@ -29,6 +31,12 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/reports/subject-analysis":"Subject Analysis",
   "/admin/report-cards":            "Report Cards",
   "/admin/settings":                "Settings",
+  "/admin/settings/academic-calendar": "Academic Calendar",
+  "/admin/settings/academic-policy":   "Academic Policy",
+  "/admin/settings/curriculum":        "Curriculum",
+  "/admin/settings/notifications":     "Notifications",
+  "/admin/settings/school-info":       "School Info",
+  "/admin/settings/security":          "Security",
   "/admin/profile":                 "My Profile",
   "/admin/terms":                   "Terms",
   "/admin/rooms":                   "Rooms",
@@ -102,6 +110,12 @@ function MobileAdminLayoutChrome({ children, user }: MobileAdminLayoutProps) {
               <RefreshCw className={cn("h-4 w-4", refresh.loading && "animate-spin")} />
             </Button>
           )}
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" asChild>
+            <Link href="/admin/profile">
+              <User className="h-[18px] w-[18px]" />
+              <span className="sr-only">My Profile</span>
+            </Link>
+          </Button>
           <NotificationBell
             ref={notificationBellRef}
             onBellClick={() => setNotificationsOpen(true)}

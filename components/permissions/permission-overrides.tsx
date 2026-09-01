@@ -157,9 +157,9 @@ export function PermissionOverrides({ user, onUpdate }: PermissionOverridesProps
   };
 
   return (
-    <div className="grid grid-cols-2 gap-6 h-full">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:h-full">
       {/* ── Left: Grant new permissions ── */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 min-w-0">
         <div>
           <h3 className="font-semibold">Grant Permissions</h3>
           <p className="text-sm text-muted-foreground">
@@ -276,7 +276,7 @@ export function PermissionOverrides({ user, onUpdate }: PermissionOverridesProps
       </div>
 
       {/* ── Right: Current overrides ── */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 min-w-0">
         <div>
           <h3 className="font-semibold">Active Overrides</h3>
           <p className="text-sm text-muted-foreground">

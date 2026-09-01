@@ -57,8 +57,73 @@ export function SubjectsTable({
   onDelete,
   showActions = true,
 }: SubjectsTableProps) {
+  if (subjects.length === 0) {
+    return (
+      <div className="rounded-md border p-8 text-center text-muted-foreground">
+        No subjects found
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-md border">
+    <>
+      {/* Mobile: tappable card rows — code only (no name/department),
+          teacher count instead of names, per the compact mobile pattern. */}
+      <div className="lg:hidden rounded-md border divide-y">
+        {subjects.map((subject) => {
+          const teachers = subject.teacherSubjects?.map((ts) => ts.teacher) || [];
+
+          return (
+            <div
+              key={subject.id}
+              onClick={() => onRowClick(subject)}
+              className="flex items-center gap-3 p-3 cursor-pointer active:bg-muted/50"
+            >
+              <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{subject.code}</p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
+                <User className="h-3.5 w-3.5" />
+                <span className="text-sm font-medium">{teachers.length}</span>
+              </div>
+              {showActions && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    asChild
+                    onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(subject);
+                      }}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(subject);
+                      }}
+                      className="text-destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: full table — unchanged */}
+      <div className="hidden lg:block rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -69,14 +134,7 @@ export function SubjectsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {subjects.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={showActions ? 4 : 3} className="text-center text-muted-foreground">
-                No subjects found
-              </TableCell>
-            </TableRow>
-          ) : (
-            subjects.map((subject) => {
+            {subjects.map((subject) => {
               const teachers = subject.teacherSubjects?.map(ts => ts.teacher) || [];
               const primaryTeacher = teachers[0];
 
@@ -163,10 +221,10 @@ export function SubjectsTable({
                   )}
                 </TableRow>
               );
-            })
-          )}
+            })}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </>
   );
 }

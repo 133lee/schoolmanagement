@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -113,7 +114,7 @@ export function AssignmentModal({
               <SelectContent>
                 {classes.map((cls) => (
                   <SelectItem key={cls.id} value={cls.id}>
-                    {cls.grade} {cls.name} (Section {cls.section})
+                    {formatCompactClassLabel(cls.grade, cls.name)} (Section {cls.section})
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -18,6 +18,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   FileCheck,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -78,6 +79,11 @@ const navGroups = [
         icon: BookOpen,
       },
       {
+        title: "Promotions",
+        url: "/admin/promotions",
+        icon: TrendingUp,
+      },
+      {
         title: "Subjects",
         url: "/admin/subjects",
         icon: FileText,
@@ -95,10 +101,6 @@ const navGroups = [
           {
             title: "Rooms",
             url: "/admin/rooms",
-          },
-          {
-            title: "Configuration",
-            url: "/admin/timetable/configuration",
           },
           {
             title: "Generate",

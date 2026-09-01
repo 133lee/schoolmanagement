@@ -73,6 +73,8 @@ export default function TeacherClassesPage() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [studentPage, setStudentPage] = useState(1);
+  const [classTeacherPage, setClassTeacherPage] = useState(1);
+  const [subjectTeacherPage, setSubjectTeacherPage] = useState(1);
   const [sheetSearchQuery, setSheetSearchQuery] = useState("");
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, AttendanceStatus>>({});
@@ -278,6 +280,23 @@ export default function TeacherClassesPage() {
 
   // ── Pagination ───────────────────────────────────────────────────────────────
   const STUDENTS_PER_PAGE = 15;
+  const CLASSES_PER_PAGE = 8;
+
+  const totalClassTeacherPages = Math.ceil(classTeacherClasses.length / CLASSES_PER_PAGE) || 1;
+  const paginatedClassTeacherClasses = classTeacherClasses.slice(
+    (classTeacherPage - 1) * CLASSES_PER_PAGE,
+    classTeacherPage * CLASSES_PER_PAGE
+  );
+
+  const totalSubjectTeacherPages = Math.ceil(subjectTeacherClasses.length / CLASSES_PER_PAGE) || 1;
+  const paginatedSubjectTeacherClasses = subjectTeacherClasses.slice(
+    (subjectTeacherPage - 1) * CLASSES_PER_PAGE,
+    subjectTeacherPage * CLASSES_PER_PAGE
+  );
+
+  // Reset to page 1 whenever the underlying class lists change (e.g. refetch)
+  useEffect(() => { setClassTeacherPage(1); }, [classTeacherClasses.length]);
+  useEffect(() => { setSubjectTeacherPage(1); }, [subjectTeacherClasses.length]);
 
   // Reset page + search when class changes
   useEffect(() => {
@@ -481,13 +500,43 @@ export default function TeacherClassesPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {renderClassRows(classTeacherClasses, "class")}
+                              {renderClassRows(paginatedClassTeacherClasses, "class")}
                             </tbody>
                           </table>
 
                           {classTeacherClasses.length === 0 && (
                             <div className="text-center py-12 text-muted-foreground px-4">
                               <p>No class assigned as class teacher</p>
+                            </div>
+                          )}
+
+                          {/* Pagination — desktop only; mobile uses the sheet's own scroll */}
+                          {totalClassTeacherPages > 1 && (
+                            <div className="hidden lg:flex items-center justify-between py-2 px-2">
+                              <span className="text-xs text-muted-foreground">
+                                {(classTeacherPage - 1) * CLASSES_PER_PAGE + 1}–{Math.min(classTeacherPage * CLASSES_PER_PAGE, classTeacherClasses.length)} of {classTeacherClasses.length}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="outline" size="sm"
+                                  onClick={() => setClassTeacherPage((p) => p - 1)}
+                                  disabled={classTeacherPage === 1}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ChevronLeft className="h-3.5 w-3.5" />
+                                </Button>
+                                <span className="text-xs text-muted-foreground px-1">
+                                  {classTeacherPage} / {totalClassTeacherPages}
+                                </span>
+                                <Button
+                                  variant="outline" size="sm"
+                                  onClick={() => setClassTeacherPage((p) => p + 1)}
+                                  disabled={classTeacherPage === totalClassTeacherPages}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             </div>
                           )}
 
@@ -530,13 +579,43 @@ export default function TeacherClassesPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {renderClassRows(subjectTeacherClasses, "subject")}
+                              {renderClassRows(paginatedSubjectTeacherClasses, "subject")}
                             </tbody>
                           </table>
 
                           {subjectTeacherClasses.length === 0 && (
                             <div className="text-center py-12 text-muted-foreground px-4">
                               <p>No classes assigned as subject teacher</p>
+                            </div>
+                          )}
+
+                          {/* Pagination — desktop only; mobile uses the sheet's own scroll */}
+                          {totalSubjectTeacherPages > 1 && (
+                            <div className="hidden lg:flex items-center justify-between py-2 px-2">
+                              <span className="text-xs text-muted-foreground">
+                                {(subjectTeacherPage - 1) * CLASSES_PER_PAGE + 1}–{Math.min(subjectTeacherPage * CLASSES_PER_PAGE, subjectTeacherClasses.length)} of {subjectTeacherClasses.length}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="outline" size="sm"
+                                  onClick={() => setSubjectTeacherPage((p) => p - 1)}
+                                  disabled={subjectTeacherPage === 1}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ChevronLeft className="h-3.5 w-3.5" />
+                                </Button>
+                                <span className="text-xs text-muted-foreground px-1">
+                                  {subjectTeacherPage} / {totalSubjectTeacherPages}
+                                </span>
+                                <Button
+                                  variant="outline" size="sm"
+                                  onClick={() => setSubjectTeacherPage((p) => p + 1)}
+                                  disabled={subjectTeacherPage === totalSubjectTeacherPages}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             </div>
                           )}
                         </>

@@ -131,12 +131,12 @@ export class ClassService {
 
   /**
    * Validate class capacity
-   * Capacity should be between 10 and 100 students
+   * Capacity should be between 10 and 500 students
    */
   private validateCapacity(capacity: number): void {
-    if (capacity < 10 || capacity > 100) {
+    if (capacity < 10 || capacity > 500) {
       throw new ValidationError(
-        "Class capacity must be between 10 and 100 students"
+        "Class capacity must be between 10 and 500 students"
       );
     }
   }

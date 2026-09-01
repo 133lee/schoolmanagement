@@ -11,6 +11,7 @@ export interface TeacherAssessmentEntry {
   teacherName: string;
   teacherEmail: string;
   subject: string;
+  subjectCode: string;
   subjectId: string;
   className: string;
   classId: string;

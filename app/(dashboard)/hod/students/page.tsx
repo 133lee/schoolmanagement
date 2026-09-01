@@ -37,7 +37,7 @@ import { useHodClasses } from "@/hooks/useHodClasses";
 import { StudentStatus, Gender } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 
 export default function HodStudentsPage() {
   const { toast } = useToast();
@@ -62,7 +62,7 @@ export default function HodStudentsPage() {
   const classOptions = useMemo(
     () =>
       (allClasses || [])
-        .map((c) => ({ id: c.id, label: `${c.grade?.name ?? ""} ${c.name}`.trim() }))
+        .map((c) => ({ id: c.id, label: formatCompactClassLabel(c.grade?.name, c.name) }))
         .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true })),
     [allClasses]
   );
@@ -216,7 +216,7 @@ export default function HodStudentsPage() {
                 onOpenChange={(open) =>
                   setActiveMobileFilter(open ? "status" : null)
                 }>
-                <SelectTrigger className={activeMobileFilter === "status" ? "w-fit" : "w-full"}>
+                <SelectTrigger className={activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full"}>
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -252,7 +252,7 @@ export default function HodStudentsPage() {
                 onOpenChange={(open) =>
                   setActiveMobileFilter(open ? "gender" : null)
                 }>
-                <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit" : "w-full"}>
+                <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit max-w-full" : "w-full"}>
                   <SelectValue placeholder="Gender" />
                 </SelectTrigger>
                 <SelectContent>

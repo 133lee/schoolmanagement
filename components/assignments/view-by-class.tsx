@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, AlertCircle } from "lucide-react";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import {
   Accordion,
   AccordionContent,
@@ -86,7 +86,7 @@ export function ViewByClass({
                     </span>
                     <div className="text-left">
                       <p className="font-medium text-foreground">
-                        {formatClassLabel(cls.grade, cls.name)}
+                        {formatCompactClassLabel(cls.grade, cls.name)}
                       </p>
                     </div>
                   </div>

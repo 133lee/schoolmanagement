@@ -137,7 +137,8 @@ export class StudentService {
   // ==================== VALIDATION METHODS ====================
 
   /**
-   * Validate student age (must be between 5 and 25 years old)
+   * Validate student age (must be between 3 and 50 years old — raised from
+   * 25 since free education re-enrolled many older students).
    */
   private validateAge(dateOfBirth: Date): void {
     const today = new Date();
@@ -150,9 +151,9 @@ export class StudentService {
       actualAge--;
     }
 
-    if (actualAge < 3 || actualAge > 25) {
+    if (actualAge < 3 || actualAge > 50) {
       throw new ValidationError(
-        `Invalid age: ${actualAge} years. Student age must be between 3 and 25 years.`
+        `Invalid age: ${actualAge} years. Student age must be between 3 and 50 years.`
       );
     }
   }

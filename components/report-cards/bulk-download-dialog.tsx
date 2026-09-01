@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -180,7 +181,7 @@ export function BulkDownloadDialog({
                     <SelectContent>
                       {classes.map((classItem) => (
                         <SelectItem key={classItem.id} value={classItem.id}>
-                          {classItem.name} ({(classItem as any).grade?.name})
+                          {formatCompactClassLabel((classItem as any).grade?.name, classItem.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -74,41 +74,45 @@ const settingsSections = [
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
-      <div className="mt-2">
+    <div className="space-y-6 px-4 lg:px-0">
+      {/* Title hidden on mobile — the top bar already shows "Settings" */}
+      <div className="hidden lg:block mt-2">
         <h1 className="text-xl font-bold">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
           System configuration and school preferences
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Thinner rows on mobile — a single icon+title+description line
+          instead of a full card, since there's nothing else in these cards
+          to justify the taller default Card padding. */}
+      <div className="grid grid-cols-1 gap-2 lg:gap-3 mt-5 lg:mt-0 sm:grid-cols-2 lg:grid-cols-3">
         {settingsSections.map((section) => {
           const Icon = section.icon;
           return (
             <Link key={section.href} href={section.href} className="group block">
-              <Card className="h-full transition-all duration-150 hover:shadow-md hover:border-primary/40 group-hover:bg-accent/30">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
-                        <Icon className="h-4.5 w-4.5" />
+              <Card className="h-full py-3 lg:py-6 transition-all duration-150 hover:shadow-md hover:border-primary/40 group-hover:bg-accent/30">
+                <CardHeader className="px-3 lg:px-6 pb-0 lg:pb-3">
+                  <div className="flex items-center lg:items-start justify-between gap-2">
+                    <div className="flex items-center lg:items-start gap-2.5 lg:gap-3 min-w-0">
+                      <div className="lg:mt-0.5 flex h-7 w-7 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
+                        <Icon className="h-3.5 w-3.5 lg:h-4.5 lg:w-4.5" />
                       </div>
-                      <div className="space-y-0.5">
-                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <div className="min-w-0 lg:space-y-0.5">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2 truncate">
                           {section.title}
                           {section.badge && (
-                            <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full leading-none ${section.badgeColor}`}>
+                            <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full leading-none shrink-0 ${section.badgeColor}`}>
                               {section.badge}
                             </span>
                           )}
                         </CardTitle>
-                        <CardDescription className="text-xs leading-snug">
+                        <CardDescription className="hidden lg:block text-xs leading-snug">
                           {section.description}
                         </CardDescription>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5 group-hover:text-muted-foreground transition-colors" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 lg:mt-0.5 group-hover:text-muted-foreground transition-colors" />
                   </div>
                 </CardHeader>
               </Card>

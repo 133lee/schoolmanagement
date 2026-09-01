@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserWithPermissions } from "@/hooks/usePermissions";
 import { ShieldOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ActiveOverridesProps {
   users: UserWithPermissions[];
@@ -22,30 +23,43 @@ interface ActiveOverridesProps {
 export function ActiveOverrides({ users, isLoading }: ActiveOverridesProps) {
   if (isLoading) {
     return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Permission</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Granted</TableHead>
-              <TableHead>Expires</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell><div className="flex items-center gap-2"><Skeleton className="h-7 w-7 rounded-full" /><Skeleton className="h-3.5 w-28" /></div></TableCell>
-                <TableCell><Skeleton className="h-5 w-36 rounded-full" /></TableCell>
-                <TableCell><Skeleton className="h-3.5 w-48" /></TableCell>
-                <TableCell><Skeleton className="h-3.5 w-20" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+      <>
+        <div className="lg:hidden space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+              <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <Skeleton className="h-3.5 w-28" />
+                <Skeleton className="h-5 w-36 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden lg:block rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Permission</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Granted</TableHead>
+                <TableHead>Expires</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><div className="flex items-center gap-2"><Skeleton className="h-7 w-7 rounded-full" /><Skeleton className="h-3.5 w-28" /></div></TableCell>
+                  <TableCell><Skeleton className="h-5 w-36 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-3.5 w-48" /></TableCell>
+                  <TableCell><Skeleton className="h-3.5 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </>
     );
   }
 
@@ -73,7 +87,54 @@ export function ActiveOverrides({ users, isLoading }: ActiveOverridesProps) {
       <p className="text-sm text-muted-foreground">
         {rows.length} active permission override{rows.length !== 1 ? "s" : ""} across {users.filter((u) => u.userPermissions.length > 0).length} user{users.filter((u) => u.userPermissions.length > 0).length !== 1 ? "s" : ""}
       </p>
-      <div className="rounded-md border">
+
+      {/* Mobile: card rows */}
+      <div className="lg:hidden space-y-2">
+        {rows.map(({ user, override: up }) => {
+          const name = user.profile
+            ? `${user.profile.firstName} ${user.profile.lastName}`
+            : user.email;
+          const initials = user.profile
+            ? `${user.profile.firstName[0]}${user.profile.lastName[0]}`.toUpperCase()
+            : user.email.slice(0, 2).toUpperCase();
+          const isExpired = up.expiresAt && new Date(up.expiresAt) < new Date();
+
+          return (
+            <div key={up.id} className={cn("rounded-lg border p-3 space-y-2", isExpired && "opacity-50")}>
+              <div className="flex items-center gap-2 min-w-0">
+                <Avatar className="h-7 w-7 shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-none truncate">{name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{user.email}</p>
+                </div>
+              </div>
+              <code className="block text-xs bg-muted px-1.5 py-0.5 rounded font-mono w-fit max-w-full truncate">
+                {up.permission}
+              </code>
+              {up.reason && (
+                <p className="text-xs text-muted-foreground truncate" title={up.reason}>{up.reason}</p>
+              )}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                <span>Granted {new Date(up.createdAt).toLocaleDateString()}</span>
+                {up.expiresAt ? (
+                  <Badge variant={isExpired ? "destructive" : "secondary"} className="text-xs">
+                    {isExpired ? "Expired " : ""}{new Date(up.expiresAt).toLocaleDateString()}
+                  </Badge>
+                ) : (
+                  <span>· Never expires</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden lg:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

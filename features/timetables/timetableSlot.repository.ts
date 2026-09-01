@@ -322,6 +322,33 @@ export class TimetableSlotRepository {
   }
 
   /**
+   * Find every slot matching the filter, unbounded — for the admin grid view
+   * and PDF export, which need the complete dataset for a school year (at
+   * most a few hundred rows), not a paginated page of it. Deliberately
+   * bypasses findMany()'s take/skip pagination cap, which exists for list
+   * UIs, not for a caller that needs the whole picture at once.
+   */
+  async findAllUnbounded(
+    where?: Prisma.TimetableSlotWhereInput,
+    orderBy?: Prisma.TimetableSlotOrderByWithRelationInput | Prisma.TimetableSlotOrderByWithRelationInput[],
+    include?: Prisma.TimetableSlotInclude
+  ) {
+    return prisma.timetableSlot.findMany({
+      where,
+      orderBy: orderBy || [{ dayOfWeek: "asc" }, { periodNumber: "asc" }],
+      include: include || {
+        class: {
+          include: {
+            grade: true,
+          },
+        },
+        subject: true,
+        teacher: true,
+      },
+    });
+  }
+
+  /**
    * Count timetable slots
    */
   async count(where?: Prisma.TimetableSlotWhereInput): Promise<number> {

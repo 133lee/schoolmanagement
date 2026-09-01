@@ -263,6 +263,9 @@ export default function AdminSubjectAnalysisPage() {
               subjectName={
                 subjects.find((s) => s.id === selectedSubject)?.name || ""
               }
+              subjectCode={
+                subjects.find((s) => s.id === selectedSubject)?.code || ""
+              }
               assessmentType={selectedAssessmentType}
               onAssessmentTypeChange={setSelectedAssessmentType}
             />

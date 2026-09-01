@@ -122,6 +122,24 @@ export class ClassRepository {
   }
 
   /**
+   * Find a class by ID with its grade's progression link (grade.nextGrade)
+   * included — used by the promotion feature to resolve the destination
+   * grade for a class.
+   */
+  async findByIdWithGradeProgression(id: string) {
+    return await prisma.class.findUnique({
+      where: { id },
+      include: {
+        grade: {
+          include: {
+            nextGrade: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Find class by grade and name
    */
   async findByGradeAndName(

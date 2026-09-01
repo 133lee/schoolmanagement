@@ -4,7 +4,8 @@ import { attendanceRecordRepository } from "./attendanceRecord.repository";
 import { classRepository } from "../classes/class.repository";
 import { termRepository } from "../terms/term.repository";
 import { studentRepository } from "../students/student.repository";
-import { UnauthorizedError, NotFoundError, ValidationError } from "@/lib/errors";
+import { verifySlotOwnership } from "@/lib/timetable/verify-slot-ownership";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import { requireMinimumRole, AuthContext } from "@/lib/auth/authorization";
 import {
   normalizeToUtcMidnight,
@@ -83,6 +84,23 @@ export class AttendanceRecordService {
     }
   }
 
+  /**
+   * A plain TEACHER may only mark period attendance for a slot that is
+   * genuinely theirs, on the day it's actually scheduled — previously
+   * enforced only by the UI only ever offering the caller's own slots, with
+   * no check at the API layer. Daily register calls (no timetableSlotId)
+   * are unaffected. See lib/timetable/verify-slot-ownership.ts for the
+   * shared check (also used by lesson logging).
+   */
+  private async verifySlotOwnership(
+    timetableSlotId: string | null | undefined,
+    date: Date,
+    context: ServiceContext
+  ): Promise<void> {
+    if (!timetableSlotId) return;
+    await verifySlotOwnership(timetableSlotId, date, context);
+  }
+
   private async validateReferences(studentId: string, classId: string, termId: string) {
     const [student, classEntity, term] = await Promise.all([
       studentRepository.findById(studentId),
@@ -111,6 +129,7 @@ export class AttendanceRecordService {
     context: ServiceContext
   ): Promise<AttendanceRecord> {
     requireMinimumRole(context, Role.TEACHER, "You do not have permission to mark attendance");
+    await this.verifySlotOwnership(data.timetableSlotId, data.date, context);
 
     this.validateDateNotFuture(data.date);
     await this.validateDateInTerm(data.date, data.termId);
@@ -169,6 +188,7 @@ export class AttendanceRecordService {
    */
   async bulkMarkAttendance(data: BulkMarkAttendanceInput, context: ServiceContext) {
     requireMinimumRole(context, Role.TEACHER, "You do not have permission to mark attendance");
+    await this.verifySlotOwnership(data.timetableSlotId, data.date, context);
 
     const failed: Array<{ studentId: string; error: string }> = [];
 

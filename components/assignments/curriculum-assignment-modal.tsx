@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { formatClassLabel } from "@/lib/utils";
+import { formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
 import { AlertTriangle, CheckCircle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -113,7 +113,7 @@ export function CurriculumAssignmentModal({
   const curriculumByClass = useMemo(() => {
     const grouped = new Map<string, CurriculumItem[]>();
     curriculum.forEach((item) => {
-      const key = formatClassLabel(item.class.grade.name, item.class.name);
+      const key = formatCompactClassLabel(item.class.grade.name, item.class.name);
       if (!grouped.has(key)) {
         grouped.set(key, []);
       }

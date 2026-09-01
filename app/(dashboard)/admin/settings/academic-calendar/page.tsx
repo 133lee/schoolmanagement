@@ -216,8 +216,8 @@ export default function AcademicCalendarPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
+      <div className="space-y-6 px-4 lg:px-0">
+        <div className="flex items-center gap-3 mt-5 lg:mt-0">
           <Skeleton className="h-8 w-8 rounded-md" />
           <div className="space-y-1.5">
             <Skeleton className="h-5 w-44" />
@@ -225,7 +225,7 @@ export default function AcademicCalendarPage() {
           </div>
         </div>
         <Skeleton className="h-12 rounded-lg" />
-        <Skeleton className="h-9 w-64 rounded-lg" />
+        <Skeleton className="h-9 w-full lg:w-64 rounded-lg" />
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-16 rounded-xl" />
@@ -236,16 +236,18 @@ export default function AcademicCalendarPage() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mt-1">
+    <div className="space-y-5 px-4 lg:px-0">
+      {/* ── Header — title hidden on mobile (top bar shows "Academic
+          Calendar"); Back button stays since the mobile top bar has no
+          back arrow of its own. ─────────────────────────────────────── */}
+      <div className="flex items-center justify-between mt-5 lg:mt-1">
         <Link href="/admin/settings">
           <Button variant="outline" size="sm">
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Settings
           </Button>
         </Link>
-        <div className="text-right">
+        <div className="hidden lg:block text-right">
           <h1 className="text-xl font-bold leading-tight">Academic Calendar</h1>
           <p className="text-sm text-muted-foreground">
             Manage academic years, terms, and grade levels
@@ -254,9 +256,9 @@ export default function AcademicCalendarPage() {
       </div>
 
       {/* ── Warning banner ─────────────────────────────────────────────── */}
-      <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 lg:px-4 lg:py-3">
         <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-        <p className="text-sm text-amber-800 dark:text-amber-300">
+        <p className="text-xs lg:text-sm text-amber-800 dark:text-amber-300">
           <span className="font-semibold">Critical configuration.</span>{" "}
           Changes here affect assessments, attendance records, and reports across the entire system.
         </p>
@@ -264,7 +266,7 @@ export default function AcademicCalendarPage() {
 
       {/* ── Tabs ──────────────────────────────────────────────────────── */}
       <Tabs defaultValue="years">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 w-full lg:w-fit">
           <TabsTrigger value="years">Academic Years</TabsTrigger>
           <TabsTrigger value="terms">Terms</TabsTrigger>
           <TabsTrigger value="grades">Grade Levels</TabsTrigger>
@@ -300,10 +302,10 @@ export default function AcademicCalendarPage() {
               ) : (
                 <div className="divide-y">
                   {academicYears.map((year) => (
-                    <div key={year.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/30 transition-colors">
+                    <div key={year.id} className="flex items-center gap-3 lg:gap-4 px-3 py-2.5 lg:px-5 lg:py-3.5 hover:bg-muted/30 transition-colors">
                       {/* Year + dates */}
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <span className="text-xs font-bold text-primary">{year.year}</span>
+                      <div className="flex h-8 w-8 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <span className="text-[10px] lg:text-xs font-bold text-primary">{year.year}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">Academic Year {year.year}</p>
@@ -317,17 +319,17 @@ export default function AcademicCalendarPage() {
                         {year.isActive && (
                           <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
                             <CheckCircle className="h-3 w-3" />
-                            Active
+                            <span className="hidden sm:inline">Active</span>
                           </span>
                         )}
                         {year.isClosed && (
                           <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
                             <Lock className="h-3 w-3" />
-                            Closed
+                            <span className="hidden sm:inline">Closed</span>
                           </span>
                         )}
                         {!year.isActive && !year.isClosed && (
-                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border text-muted-foreground">
+                          <span className="hidden sm:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border text-muted-foreground">
                             Inactive
                           </span>
                         )}
@@ -379,7 +381,7 @@ export default function AcademicCalendarPage() {
             {/* Year picker + add button */}
             <div className="flex items-center justify-between gap-3">
               <Select value={selectedYearId} onValueChange={setSelectedYearId}>
-                <SelectTrigger className="w-52">
+                <SelectTrigger className="flex-1 min-w-0 lg:flex-none lg:w-52">
                   <SelectValue placeholder="Select academic year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -392,12 +394,12 @@ export default function AcademicCalendarPage() {
               </Select>
               <Button
                 size="sm"
-                className="h-8 gap-1.5"
+                className="h-8 gap-1.5 shrink-0"
                 disabled={!selectedYearId}
                 onClick={() => setCreateTermOpen(true)}
               >
                 <Plus className="h-3.5 w-3.5" />
-                New Term
+                <span className="hidden sm:inline">New Term</span>
               </Button>
             </div>
 
@@ -406,13 +408,13 @@ export default function AcademicCalendarPage() {
                 {termsLoading ? (
                   <div className="divide-y">
                     {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                        <Skeleton className="h-9 w-9 rounded-lg" />
+                      <div key={i} className="flex items-center gap-3 lg:gap-4 px-3 py-2.5 lg:px-5 lg:py-3.5">
+                        <Skeleton className="h-8 w-8 lg:h-9 lg:w-9 rounded-lg" />
                         <div className="flex-1 space-y-1.5">
                           <Skeleton className="h-4 w-24" />
                           <Skeleton className="h-3 w-40" />
                         </div>
-                        <Skeleton className="h-5 w-16 rounded-full" />
+                        <Skeleton className="h-5 w-16 rounded-full hidden sm:block" />
                         <Skeleton className="h-7 w-7 rounded-md" />
                       </div>
                     ))}
@@ -442,9 +444,9 @@ export default function AcademicCalendarPage() {
                 ) : (
                   <div className="divide-y">
                     {terms.map((term) => (
-                      <div key={term.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/30 transition-colors">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                          <span className="text-xs font-bold text-foreground">
+                      <div key={term.id} className="flex items-center gap-3 lg:gap-4 px-3 py-2.5 lg:px-5 lg:py-3.5 hover:bg-muted/30 transition-colors">
+                        <div className="flex h-8 w-8 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                          <span className="text-[10px] lg:text-xs font-bold text-foreground">
                             T{term.termType.replace("TERM_", "")}
                           </span>
                         </div>
@@ -460,10 +462,10 @@ export default function AcademicCalendarPage() {
                         {term.isActive ? (
                           <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 shrink-0">
                             <CheckCircle className="h-3 w-3" />
-                            Active
+                            <span className="hidden sm:inline">Active</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border text-muted-foreground shrink-0">
+                          <span className="hidden sm:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border text-muted-foreground shrink-0">
                             Inactive
                           </span>
                         )}
@@ -548,7 +550,7 @@ export default function AcademicCalendarPage() {
             )}
 
             {gradesLoading ? (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <Skeleton key={i} className="h-14 rounded-xl" />
                 ))}
@@ -573,14 +575,14 @@ export default function AcademicCalendarPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {grades.map((grade) => (
                   <div
                     key={grade.id}
-                    className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3"
+                    className="flex items-center gap-2.5 lg:gap-3 rounded-xl border bg-card px-3 py-2 lg:px-4 lg:py-3"
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                      <GraduationCap className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-muted-foreground" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{grade.name}</p>

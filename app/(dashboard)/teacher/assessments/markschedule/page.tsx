@@ -152,12 +152,10 @@ async function downloadPDF(data: PDFData) {
     logo: { width: 52, height: 52, marginBottom: 4, objectFit: "contain" },
     infoRow: {
       flexDirection: "row",
-      marginBottom: 6,
-      borderBottomWidth: 0.5,
-      borderColor: "#555",
-      paddingBottom: 4,
+      justifyContent: "space-between",
+      marginBottom: 8,
     },
-    infoCell: { flex: 1, flexDirection: "row", gap: 2 },
+    infoCell: { flexDirection: "row", gap: 2 },
     table: { borderWidth: 0.5, borderColor: "#000" },
     row: { flexDirection: "row" },
     evenRow: { backgroundColor: "#f5f5f5" },
@@ -746,25 +744,26 @@ export default function MarkSchedulePage() {
           <p className="font-bold uppercase tracking-widest">Mark Schedule</p>
         </div>
 
-        {/* Info row — evenly spread across full table width */}
-        <div className="grid grid-cols-5 mb-3 text-xs border-b pb-2 gap-x-2 mx-2">
-          <span>
+        {/* Info row — justified spacing between fields, each field wraps to
+            its own line if the row gets too narrow instead of overlapping. */}
+        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 mb-3 text-xs mx-2">
+          <span className="min-w-0">
             <span className="font-semibold">CLASS: </span>
             {selectedClass?.name ?? "—"}
           </span>
-          <span>
+          <span className="min-w-0">
             <span className="font-semibold">SUBJECT: </span>
             {selectedSubject?.name ?? "—"}
           </span>
-          <span>
+          <span className="min-w-0">
             <span className="font-semibold">TEACHER: </span>
             {teacherName || "—"}
           </span>
-          <span>
+          <span className="min-w-0">
             <span className="font-semibold">TERM: </span>
             {termNum}
           </span>
-          <span>
+          <span className="min-w-0">
             <span className="font-semibold">YEAR: </span>
             {String(termYear)}
           </span>

@@ -43,6 +43,8 @@ import { DepartmentSheet } from "@/components/departments/department-sheet";
 import { useDepartments } from "@/hooks/useDepartments";
 import { DepartmentStatus } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
+import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +75,11 @@ export default function DepartmentsManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [departmentToDelete, setDepartmentToDelete] = useState<any>(null);
 
+  // Mobile-only: which of the row-one filters is currently focused/open.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "status" | null
+  >(null);
+
   // Use the departments hook with filters and pagination
   const { departments, meta, isLoading, error, refetch, deleteDepartment } =
     useDepartments(
@@ -90,6 +97,10 @@ export default function DepartmentsManagement() {
       description: "Department list has been refreshed",
     });
   };
+
+  // On mobile, the refresh action lives as an icon next to the notification
+  // bell in the layout's header instead of the inline "Refresh" button below.
+  useMobileHeaderRefresh(handleRefresh, isLoading);
 
   const handleRowClick = (department: any) => {
     setSheetDepartmentId(department.id);
@@ -177,20 +188,23 @@ export default function DepartmentsManagement() {
     return pages;
   };
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between mt-2">
-        <div className="flex flex-col space-y-2">
+    <div className="space-y-6 px-4 lg:px-0">
+      {/* Page Header — title hidden on mobile (top bar shows it); extra top
+          margin on mobile since the buttons become the first visible thing
+          under the sticky top bar once the title is hidden. */}
+      <div className="flex items-start justify-between mt-5 lg:mt-2">
+        <div className="hidden lg:flex flex-col space-y-2">
           <h1 className="text-xl font-bold">Departments Management</h1>
           <p className="text-muted-foreground text-sm">
             Manage departments, assign teachers, and track statistics
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-1 justify-end lg:flex-none lg:justify-normal">
           <Button
             variant="outline"
             onClick={handleRefresh}
-            disabled={isLoading}>
+            disabled={isLoading}
+            className="hidden lg:inline-flex">
             <RefreshCw
               className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
             />
@@ -208,7 +222,56 @@ export default function DepartmentsManagement() {
       {/* Main Content */}
       <Card className="flex flex-col h-[calc(100vh-12rem)]">
         <CardHeader>
-          <div className="flex gap-3">
+          {/* ── Mobile filters: search + status share the one row, the
+              focused one grows by its own content, the other shrinks. ──── */}
+          <div className="flex lg:hidden gap-2">
+            <div
+              className={cn(
+                "relative min-w-0 transition-all duration-200",
+                activeMobileFilter === "search" ? "flex-[3]" : "flex-1"
+              )}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setActiveMobileFilter("search")}
+                onBlur={() => setActiveMobileFilter(null)}
+              />
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "status" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as DepartmentStatus | "all")
+                }
+                onOpenChange={(open) => setActiveMobileFilter(open ? "status" : null)}>
+                <SelectTrigger className={cn(activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full")}>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value={DepartmentStatus.ACTIVE}>Active</SelectItem>
+                  <SelectItem value={DepartmentStatus.INACTIVE}>
+                    Inactive
+                  </SelectItem>
+                  <SelectItem value={DepartmentStatus.ARCHIVED}>
+                    Archived
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* ── Desktop filters — unchanged ─────────────────────────────── */}
+          <div className="hidden lg:flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -249,16 +312,33 @@ export default function DepartmentsManagement() {
           )}
 
           {isLoading ? (
-            <div className="space-y-3 pt-2">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-16 ml-auto" />
-                </div>
-              ))}
-            </div>
+            <>
+              {/* Mobile skeleton — mirrors DepartmentsTable's tappable card rows */}
+              <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3">
+                    <Skeleton className="h-4 w-4 shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-14 rounded-full shrink-0" />
+                    <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+                  </div>
+                ))}
+              </div>
+              {/* Desktop skeleton — mirrors the Department/Code/HOD/Teachers/Subjects/Status/Actions table */}
+              <div className="hidden lg:block space-y-3 pt-2">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-16 ml-auto" />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : departments.length === 0 ? (
             <Empty className="h-96">
               <EmptyContent>

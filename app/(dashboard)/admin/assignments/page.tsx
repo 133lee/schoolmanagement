@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -296,7 +297,7 @@ export default function AllAssignmentsPage() {
                   <SelectItem value="">All classes</SelectItem>
                   {classes.map((classItem) => (
                     <SelectItem key={classItem.id} value={classItem.id}>
-                      {classItem.grade.name} {classItem.section}
+                      {formatCompactClassLabel(classItem.grade.name, classItem.section)}
                     </SelectItem>
                   ))}
                 </SelectContent>

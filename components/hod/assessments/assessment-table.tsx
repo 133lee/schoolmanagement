@@ -32,6 +32,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { TeacherAssessmentEntry } from "@/types/hod-assessment";
 import { StatusBadge } from "./status-badge";
 import { ProgressBar } from "./progress-bar";
@@ -120,6 +121,17 @@ export function AssessmentTable({
     </button>
   );
 
+  const EXAM_TYPE_LABEL: Record<string, string> = {
+    CAT: "CAT",
+    MID: "Mid-Term",
+    EOT: "End of Term",
+  };
+  const EXAM_TYPE_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
+    CAT: "default",
+    MID: "secondary",
+    EOT: "destructive",
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -154,6 +166,9 @@ export function AssessmentTable({
                 </TableHead>
                 <TableHead className="font-semibold text-foreground">
                   <SortHeader label="Class" sortKeyName="className" />
+                </TableHead>
+                <TableHead className="font-semibold text-foreground">
+                  Type
                 </TableHead>
                 <TableHead className="font-semibold text-foreground text-center">
                   Students
@@ -200,9 +215,14 @@ export function AssessmentTable({
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {assessment.subject}
+                    {assessment.subjectCode}
                   </TableCell>
                   <TableCell>{assessment.className}</TableCell>
+                  <TableCell>
+                    <Badge variant={EXAM_TYPE_VARIANT[assessment.assessmentType] ?? "default"} className="text-xs">
+                      {EXAM_TYPE_LABEL[assessment.assessmentType] ?? assessment.assessmentType}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-center">
                     <span className="font-medium">
                       {assessment.scoresEntered}

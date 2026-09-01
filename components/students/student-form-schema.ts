@@ -36,11 +36,11 @@ export const studentFormSchema = z.object({
     message: "Date of birth is required"
   }).refine((date) => {
     const minDate = new Date();
-    minDate.setFullYear(minDate.getFullYear() - 25);
+    minDate.setFullYear(minDate.getFullYear() - 50);
     const maxDate = new Date();
     maxDate.setFullYear(maxDate.getFullYear() - 3);
     return date >= minDate && date <= maxDate;
-  }, "Student must be between 3 and 25 years old"),
+  }, "Student must be between 3 and 50 years old"),
 
   // Step 2: Student Details
   studentNumber: z

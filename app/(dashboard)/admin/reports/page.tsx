@@ -17,6 +17,7 @@ import { AdminSubjectAnalysisContent } from "@/components/admin/admin-subject-an
 import { AdminReportsHeader } from "@/components/reports/admin-reports-header";
 import { PerformanceListsContent } from "@/components/reports/performance-lists-content";
 import { api } from "@/lib/api-client";
+import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
 
 interface GradeOption {
   id: string;
@@ -127,6 +128,10 @@ export default function AdminReportsPage() {
     fetchInitialData();
   }, []);
 
+  // On mobile, refresh lives as an icon next to the notification bell in the
+  // layout's header instead of the inline "Refresh" button below.
+  useMobileHeaderRefresh(fetchInitialData, loading);
+
   // Fetch classes when grade changes
   useEffect(() => {
     async function fetchClasses() {
@@ -159,8 +164,8 @@ export default function AdminReportsPage() {
 
   return (
     <div className="px-4 lg:px-0 space-y-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between mt-2">
+      {/* Page Header — desktop only; mobile top bar handles the title + refresh */}
+      <div className="hidden lg:flex items-start justify-between mt-2">
         <div className="flex flex-col space-y-1">
           <h1 className="text-xl font-bold">Reports & Analysis</h1>
           <p className="text-muted-foreground text-sm">
@@ -181,7 +186,7 @@ export default function AdminReportsPage() {
 
       {/* Error State */}
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mt-5 lg:mt-0">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -189,8 +194,18 @@ export default function AdminReportsPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="space-y-4">
-          <div className="flex gap-3"><Skeleton className="h-9 w-36" /><Skeleton className="h-9 w-36" /><Skeleton className="h-9 w-28" /></div>
+        <div className="space-y-4 mt-5 lg:mt-0">
+          {/* Filter row skeleton — mirrors AdminReportsHeader's mobile
+              compact layout (2 in row one, term spanning row two) vs
+              desktop's flat row. */}
+          <div className="flex gap-2 lg:hidden">
+            <Skeleton className="h-9 flex-1" />
+            <Skeleton className="h-9 flex-1" />
+          </div>
+          <div className="lg:hidden"><Skeleton className="h-9 w-full" /></div>
+          <div className="hidden lg:flex gap-3">
+            <Skeleton className="h-9 w-36" /><Skeleton className="h-9 w-36" /><Skeleton className="h-9 w-28" />
+          </div>
           <div className="flex gap-2 border-b pb-2">{[0,1,2,3].map(i => <Skeleton key={i} className="h-9 w-28" />)}</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[0,1,2].map(i => <Card key={i}><CardContent className="pt-5 space-y-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-16" /></CardContent></Card>)}
@@ -218,7 +233,7 @@ export default function AdminReportsPage() {
           onValueChange={(v) =>
             setActiveTab(v as "subject-analysis" | "performance-lists")
           }
-          className="w-full">
+          className="w-full mt-5 lg:mt-0">
           <TabsList className="grid w-full grid-cols-2 bg-muted/50">
             <TabsTrigger
               value="subject-analysis"
@@ -253,6 +268,7 @@ export default function AdminReportsPage() {
               subjects={subjects}
               terms={terms}
               hideClassFilter={true}
+              mobileCompactFilters
             />
 
             {!selectedGrade || !selectedSubject || !selectedTerm ? (
@@ -286,6 +302,7 @@ export default function AdminReportsPage() {
                     termId={selectedTerm}
                     gradeName={selectedGradeData?.name || ""}
                     subjectName={selectedSubjectData?.name || ""}
+                    subjectCode={selectedSubjectData?.code || ""}
                     convention={showConventionFilter ? selectedConvention : undefined}
                     assessmentType={selectedAssessmentType}
                     onAssessmentTypeChange={setSelectedAssessmentType}
@@ -314,6 +331,7 @@ export default function AdminReportsPage() {
               classes={classes}
               subjects={subjects}
               terms={terms}
+              mobileCompactFilters
             />
 
             {!selectedClass || !selectedTerm ? (

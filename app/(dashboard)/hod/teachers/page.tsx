@@ -185,7 +185,7 @@ export default function HodTeachersPage() {
                 onOpenChange={(open) =>
                   setActiveMobileFilter(open ? "status" : null)
                 }>
-                <SelectTrigger className={activeMobileFilter === "status" ? "w-fit" : "w-full"}>
+                <SelectTrigger className={activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full"}>
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -213,7 +213,7 @@ export default function HodTeachersPage() {
                 onOpenChange={(open) =>
                   setActiveMobileFilter(open ? "gender" : null)
                 }>
-                <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit" : "w-full"}>
+                <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit max-w-full" : "w-full"}>
                   <SelectValue placeholder="Gender" />
                 </SelectTrigger>
                 <SelectContent>

@@ -1,7 +1,7 @@
 "use client";
 
 import { User, Mail, Phone, BookOpen, Users, Clock } from "lucide-react";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -225,7 +225,7 @@ export function ViewByTeacher({
                               variant="outline"
                               className="text-[10px] bg-card"
                             >
-                              {formatClassLabel(cls.grade, cls.name)}
+                              {formatCompactClassLabel(cls.grade, cls.name)}
                             </Badge>
                           ))}
                         </div>

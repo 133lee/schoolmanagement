@@ -51,6 +51,15 @@ interface DepartmentsTableProps {
   showActions?: boolean;
 }
 
+const getStatusLabel = (status: Department["status"]) =>
+  status === "ACTIVE" ? "Active" :
+  status === "INACTIVE" ? "Inactive" :
+  status === "ARCHIVED" ? "Archived" :
+  status;
+
+const getStatusVariant = (status: Department["status"]) =>
+  status === "Active" || status === "ACTIVE" ? "default" : "secondary";
+
 export function DepartmentsTable({
   departments,
   onRowClick,
@@ -59,36 +68,94 @@ export function DepartmentsTable({
   onViewDetails,
   showActions = true,
 }: DepartmentsTableProps) {
-  console.log("[TABLE] DepartmentsTable rendering with departments - HOD data:", departments.map(d => ({
-    departmentId: d.id,
-    departmentName: d.name,
-    hodTeacherId: d.hod?.id,
-    hod: d.hod,
-  })));
+  const renderActions = (department: Department) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(department);
+          }}>
+          <Edit className="h-4 w-4 mr-2" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails?.(department);
+          }}>
+          <Building2 className="h-4 w-4 mr-2" />
+          View Details
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(department);
+          }}
+          className="text-destructive">
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  if (departments.length === 0) {
+    return (
+      <div className="rounded-md border py-10 text-center text-sm text-muted-foreground">
+        No departments found
+      </div>
+    );
+  }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Department</TableHead>
-            <TableHead>Code</TableHead>
-            <TableHead>Head of Department</TableHead>
-            <TableHead>Teachers</TableHead>
-            <TableHead>Subjects</TableHead>
-            <TableHead>Status</TableHead>
-            {showActions && <TableHead className="text-right">Actions</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {departments.length === 0 ? (
+    <>
+      {/* ── Mobile: tappable card rows — code instead of the full name,
+          Code/HOD/Subjects columns dropped to keep this compact (still one
+          tap away via the detail sheet). ────────────────────────────────── */}
+      <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+        {departments.map((department) => (
+          <div
+            key={department.id}
+            onClick={() => onRowClick(department)}
+            className="flex items-center gap-3 p-3 active:bg-muted/70 transition-colors cursor-pointer"
+          >
+            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{department.code}</p>
+              <p className="text-xs text-muted-foreground">
+                {department.teacherCount ?? 0} {(department.teacherCount ?? 0) === 1 ? "teacher" : "teachers"}
+              </p>
+            </div>
+            <Badge variant={getStatusVariant(department.status)} className="text-[10px] px-1.5 py-0 shrink-0">
+              {getStatusLabel(department.status)}
+            </Badge>
+            {showActions && renderActions(department)}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Desktop: full table — unchanged ─────────────────────────────── */}
+      <div className="hidden lg:block rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={showActions ? 7 : 6} className="text-center text-muted-foreground">
-                No departments found
-              </TableCell>
+              <TableHead>Department</TableHead>
+              <TableHead>Code</TableHead>
+              <TableHead>Head of Department</TableHead>
+              <TableHead>Teachers</TableHead>
+              <TableHead>Subjects</TableHead>
+              <TableHead>Status</TableHead>
+              {showActions && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
-          ) : (
-            departments.map((department) => (
+          </TableHeader>
+          <TableBody>
+            {departments.map((department) => (
               <TableRow
                 key={department.id}
                 onClick={() => onRowClick(department)}
@@ -135,62 +202,20 @@ export function DepartmentsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={
-                    department.status === "Active" || department.status === "ACTIVE"
-                      ? "default"
-                      : "secondary"
-                  }>
-                    {department.status === "ACTIVE" ? "Active" :
-                     department.status === "INACTIVE" ? "Inactive" :
-                     department.status === "ARCHIVED" ? "Archived" :
-                     department.status}
+                  <Badge variant={getStatusVariant(department.status)}>
+                    {getStatusLabel(department.status)}
                   </Badge>
                 </TableCell>
                 {showActions && (
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        asChild
-                        onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(department);
-                          }}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onViewDetails?.(department);
-                          }}>
-                          <Building2 className="h-4 w-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(department);
-                          }}
-                          className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {renderActions(department)}
                   </TableCell>
                 )}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }

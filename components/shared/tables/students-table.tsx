@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Student, StudentStatus, Gender } from "@/types/prisma-enums";
-import { formatClassLabel } from "@/lib/utils";
+import { formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -61,16 +61,6 @@ interface StudentsTableProps {
    *  that aren't already self-identifying (Form 1–5 names keep their own
    *  name, unprefixed). Desktop table is unaffected either way. */
   compactMobileClassLabel?: boolean;
-}
-
-// Form-grade classes are already named "F1 Blue", "F2-A", etc. — self
-// identifying. Anything else gets the grade's number prefixed instead
-// (e.g. "Grade 10" + "A" -> "10 A").
-function formatCompactClassLabel(grade: string, className: string) {
-  if (/^f[1-5]\b/i.test(className)) return className;
-  const gradeNumber = grade?.match(/\d+/)?.[0];
-  if (!gradeNumber || className.trim().startsWith(gradeNumber)) return className;
-  return `${gradeNumber} ${className}`;
 }
 
 const statusVariants: Record<StudentStatus, "default" | "secondary" | "destructive" | "outline"> = {

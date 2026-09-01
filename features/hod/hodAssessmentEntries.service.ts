@@ -2,15 +2,12 @@ import prisma from "@/lib/db/prisma";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/http/errors";
 import { getHODDepartment } from "@/lib/auth/position-helpers";
 import { ExamType } from "@/types/prisma-enums";
+import { formatCompactClassLabel } from "@/lib/utils";
 import {
   TeacherAssessmentEntry,
   AssessmentDashboardStats,
   AssessmentEntryStatus,
 } from "@/types/hod-assessment";
-
-function resolveClassName(gradeName: string, className: string): string {
-  return /^[A-Za-z]\d|^\d/.test(className) ? className : `${gradeName} ${className}`;
-}
 
 export interface AssessmentEntriesFilters {
   termId?: string;
@@ -156,8 +153,9 @@ export class HODAssessmentEntriesService {
         teacherName: `${assignment.teacher.firstName} ${assignment.teacher.lastName}`,
         teacherEmail: assignment.teacher.user.email,
         subject: assessment.subject.name,
+        subjectCode: assessment.subject.code,
         subjectId: assessment.subjectId,
-        className: resolveClassName(assignment.class.grade.name, assignment.class.name),
+        className: formatCompactClassLabel(assignment.class.grade.name, assignment.class.name),
         classId: assessment.classId,
         totalStudents: studentCount,
         scoresEntered,
@@ -202,7 +200,7 @@ export class HODAssessmentEntriesService {
           name: `Term ${t.termType.replace("TERM_", "")} · ${academicYear.year ?? ""}`.trim(),
         })),
         assessmentTypes: ["CAT", "MID", "EOT"],
-        classes: classes.map((c) => ({ id: c.id, name: resolveClassName(c.grade.name, c.name) })),
+        classes: classes.map((c) => ({ id: c.id, name: formatCompactClassLabel(c.grade.name, c.name) })),
         teachers: teachers.map((t) => ({ id: t.id, name: `${t.firstName} ${t.lastName}` })),
       },
     };

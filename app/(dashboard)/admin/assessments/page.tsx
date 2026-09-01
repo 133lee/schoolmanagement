@@ -73,6 +73,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { toast } from "sonner";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
+import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -119,6 +121,9 @@ function formatTermLabel(termType: string): string {
   return termType.replace(/^TERM_(\d+)$/, (_, n) => `Term ${n}`);
 }
 
+// Form-grade classes are already named "F1 Blue", "F2-A", etc. — self
+// identifying. Anything else gets the grade's number prefixed instead
+// (e.g. "Grade 10" + "A" -> "10 A"). Mobile-only compact class label.
 function windowState(w: AssessmentWindow): "before_open" | "open" | "closed" {
   const now = Date.now();
   if (now < new Date(w.opensAt).getTime()) return "before_open";
@@ -291,6 +296,11 @@ export default function AdminAssessmentsPage() {
   const [actionType, setActionType] = useState<"publish" | "complete" | null>(null);
   const [actioning, setActioning] = useState(false);
 
+  // Mobile-only: which of the row-one filters is currently focused/open.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "class" | "term" | "examType" | "status" | null
+  >(null);
+
   // ── Windows tab state ──
   const [windows, setWindows] = useState<AssessmentWindow[]>([]);
   const [windowsLoading, setWindowsLoading] = useState(false);
@@ -335,6 +345,10 @@ export default function AdminAssessmentsPage() {
   useEffect(() => { loadAssessments(); }, [loadAssessments]);
   useEffect(() => { loadWindows(); }, [loadWindows]);
 
+  // On mobile, refresh lives as an icon next to the notification bell in the
+  // layout's header instead of the inline "Refresh" button below.
+  useMobileHeaderRefresh(loadAssessments, loading);
+
   const handleAction = async () => {
     if (!actionTarget || !actionType) return;
     setActioning(true);
@@ -374,9 +388,9 @@ export default function AdminAssessmentsPage() {
     : assessments;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between mt-2">
+    <div className="space-y-5 px-4 lg:px-0">
+      {/* Header — desktop only; mobile top bar handles the title */}
+      <div className="hidden lg:flex items-center justify-between mt-2">
         <div>
           <h1 className="text-xl font-bold">Assessments</h1>
           <p className="text-sm text-muted-foreground">
@@ -386,14 +400,16 @@ export default function AdminAssessmentsPage() {
       </div>
 
       <Tabs defaultValue="assessments">
-        <TabsList>
-          <TabsTrigger value="assessments" className="gap-2">
-            <ClipboardList className="h-4 w-4" /> Assessments
-          </TabsTrigger>
-          <TabsTrigger value="windows" className="gap-2">
-            <CalendarClock className="h-4 w-4" /> Entry Windows
-          </TabsTrigger>
-        </TabsList>
+        <div className="mt-5 lg:mt-0">
+          <TabsList className="w-full lg:w-fit">
+            <TabsTrigger value="assessments" className="gap-2">
+              <ClipboardList className="h-4 w-4" /> Assessments
+            </TabsTrigger>
+            <TabsTrigger value="windows" className="gap-2">
+              <CalendarClock className="h-4 w-4" /> Entry Windows
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ── Assessments tab ── */}
         <TabsContent value="assessments" className="space-y-4 mt-4">
@@ -407,7 +423,67 @@ export default function AdminAssessmentsPage() {
 
           <Card>
             <CardContent className="py-4">
-              <div className="flex flex-wrap gap-3 items-center">
+              {/* ── Mobile filters: search on its own row; class/term share
+                  row two, exam type/status share row three — each pair
+                  content-based grow/shrink on focus. ────────────────────── */}
+              <div className="flex flex-col gap-2 lg:hidden">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input placeholder="Search assessments..." className="pl-9 h-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+                <div className="flex gap-2">
+                  <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "class" ? "flex-none max-w-[70%]" : "flex-1")}>
+                    <Select value={classFilter} onValueChange={(v) => { setClassFilter(v); setPage(1); }} onOpenChange={(open) => setActiveMobileFilter(open ? "class" : null)}>
+                      <SelectTrigger className={cn("h-9", activeMobileFilter === "class" ? "w-fit max-w-full" : "w-full")}><SelectValue placeholder="Class" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Classes</SelectItem>
+                        {classes.map((c) => <SelectItem key={c.id} value={c.id}>{formatCompactClassLabel(c.grade?.name, c.name)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "term" ? "flex-none max-w-[70%]" : "flex-1")}>
+                    <Select value={termFilter} onValueChange={(v) => { setTermFilter(v); setPage(1); }} onOpenChange={(open) => setActiveMobileFilter(open ? "term" : null)}>
+                      <SelectTrigger className={cn("h-9", activeMobileFilter === "term" ? "w-fit max-w-full" : "w-full")}><SelectValue placeholder="Term" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Terms</SelectItem>
+                        {terms.map((t) => <SelectItem key={t.id} value={t.id}>{formatTermLabel(t.termType)}{t.academicYear ? ` · ${t.academicYear.year}` : ""}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "examType" ? "flex-none max-w-[70%]" : "flex-1")}>
+                    <Select value={examTypeFilter} onValueChange={(v) => { setExamTypeFilter(v as ExamType | "all"); setPage(1); }} onOpenChange={(open) => setActiveMobileFilter(open ? "examType" : null)}>
+                      <SelectTrigger className={cn("h-9", activeMobileFilter === "examType" ? "w-fit max-w-full" : "w-full")}><SelectValue placeholder="Exam Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="CAT">CAT 1</SelectItem>
+                        <SelectItem value="MID">Mid-Term</SelectItem>
+                        <SelectItem value="EOT">End of Term</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "status" ? "flex-none max-w-[70%]" : "flex-1")}>
+                    <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as AssessmentStatus | "all"); setPage(1); }} onOpenChange={(open) => setActiveMobileFilter(open ? "status" : null)}>
+                      <SelectTrigger className={cn("h-9", activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full")}><SelectValue placeholder="Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="DRAFT">Draft</SelectItem>
+                        <SelectItem value="PUBLISHED">Published</SelectItem>
+                        <SelectItem value="COMPLETED">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {hasFilters && (
+                  <Button variant="ghost" size="sm" className="text-muted-foreground self-start" onClick={() => { setClassFilter("all"); setTermFilter("all"); setStatusFilter("all"); setExamTypeFilter("all"); setPage(1); }}>
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+
+              {/* ── Desktop filters — unchanged ─────────────────────────── */}
+              <div className="hidden lg:flex flex-wrap gap-3 items-center">
                 <div className="relative flex-1 min-w-[180px] max-w-xs">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input placeholder="Search assessments..." className="pl-9 h-9" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -416,7 +492,7 @@ export default function AdminAssessmentsPage() {
                   <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Class" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Classes</SelectItem>
-                    {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.grade?.name} {c.name}</SelectItem>)}
+                    {classes.map((c) => <SelectItem key={c.id} value={c.id}>{formatCompactClassLabel(c.grade?.name, c.name)}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={termFilter} onValueChange={(v) => { setTermFilter(v); setPage(1); }}>
@@ -460,13 +536,29 @@ export default function AdminAssessmentsPage() {
           <Card>
             <CardContent className="p-0">
               {loading ? (
-                <div className="p-6 space-y-3">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <Skeleton className="h-4 w-48" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-20" /><Skeleton className="h-5 w-20 rounded-full ml-auto" />
-                    </div>
-                  ))}
-                </div>
+                <>
+                  {/* Mobile skeleton — mirrors the tappable card rows below */}
+                  <div className="lg:hidden divide-y">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3">
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <Skeleton className="h-4 w-40" />
+                          <Skeleton className="h-3 w-48" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                        <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Desktop skeleton — mirrors the table columns */}
+                  <div className="hidden lg:block p-6 space-y-3">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4">
+                        <Skeleton className="h-4 w-48" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-20" /><Skeleton className="h-5 w-20 rounded-full ml-auto" />
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : filtered.length === 0 ? (
                 <Empty className="py-20">
                   <EmptyContent>
@@ -478,78 +570,134 @@ export default function AdminAssessmentsPage() {
                   </EmptyContent>
                 </Empty>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Assessment</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead>Term</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-center">Marks</TableHead>
-                      <TableHead className="text-center">Results</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* ── Mobile: tappable card rows — subject code instead of
+                      name, class grade-prefixed unless it's already a Form
+                      name. ─────────────────────────────────────────────── */}
+                  <div className="lg:hidden divide-y">
                     {filtered.map((a) => {
                       const statusInfo = STATUS_VARIANTS[a.status];
                       return (
-                        <TableRow key={a.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-sm">{a.title}</p>
-                              <p className="text-xs text-muted-foreground">{a.subject.name}</p>
+                        <div key={a.id} className="flex items-start gap-3 p-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium text-sm truncate">{a.title}</p>
+                              <span className={`inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium shrink-0 ${statusInfo.class}`}>{statusInfo.label}</span>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            <p className="font-medium">{a.class.name}</p>
-                            <p className="text-xs text-muted-foreground">{a.class.grade?.name}</p>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {formatTermLabel(a.term.termType)}{a.term.academicYear && ` · ${a.term.academicYear.year}`}
-                          </TableCell>
-                          <TableCell><span className="text-sm">{EXAM_LABELS[a.examType]}</span></TableCell>
-                          <TableCell className="text-center text-sm">{a.totalMarks}</TableCell>
-                          <TableCell className="text-center"><span className="text-sm font-medium tabular-nums">{a._count?.results ?? 0}</span></TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusInfo.class}`}>{statusInfo.label}</span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreVertical className="h-4 w-4" /></Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {a.status === "DRAFT" && (
-                                  <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("publish"); }}>
-                                    <Send className="h-4 w-4 mr-2 text-blue-500" />Publish
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {a.subject.code} · {formatCompactClassLabel(a.class.grade?.name, a.class.name)} · {EXAM_LABELS[a.examType]}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {a.totalMarks} marks · {a._count?.results ?? 0} results
+                            </p>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {a.status === "DRAFT" && (
+                                <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("publish"); }}>
+                                  <Send className="h-4 w-4 mr-2 text-blue-500" />Publish
+                                </DropdownMenuItem>
+                              )}
+                              {a.status === "PUBLISHED" && (
+                                <>
+                                  <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("complete"); }}>
+                                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Mark as Completed
                                   </DropdownMenuItem>
-                                )}
-                                {a.status === "PUBLISHED" && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("complete"); }}>
-                                      <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Mark as Completed
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
-                                      <FileText className="h-4 w-4 mr-2" />{a._count?.results ?? 0} result{a._count?.results !== 1 ? "s" : ""} entered
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                                {a.status === "COMPLETED" && (
-                                  <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-                                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Finalised — included in report cards
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
+                                    <FileText className="h-4 w-4 mr-2" />{a._count?.results ?? 0} result{a._count?.results !== 1 ? "s" : ""} entered
                                   </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
+                                </>
+                              )}
+                              {a.status === "COMPLETED" && (
+                                <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Finalised — included in report cards
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </div>
+
+                  {/* ── Desktop: full table — unchanged ─────────────────── */}
+                  <Table className="hidden lg:table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Assessment</TableHead>
+                        <TableHead>Class</TableHead>
+                        <TableHead>Term</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="text-center">Marks</TableHead>
+                        <TableHead className="text-center">Results</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((a) => {
+                        const statusInfo = STATUS_VARIANTS[a.status];
+                        return (
+                          <TableRow key={a.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium text-sm">{a.title}</p>
+                                <p className="text-xs text-muted-foreground">{a.subject.name}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <p className="font-medium">{a.class.name}</p>
+                              <p className="text-xs text-muted-foreground">{a.class.grade?.name}</p>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatTermLabel(a.term.termType)}{a.term.academicYear && ` · ${a.term.academicYear.year}`}
+                            </TableCell>
+                            <TableCell><span className="text-sm">{EXAM_LABELS[a.examType]}</span></TableCell>
+                            <TableCell className="text-center text-sm">{a.totalMarks}</TableCell>
+                            <TableCell className="text-center"><span className="text-sm font-medium tabular-nums">{a._count?.results ?? 0}</span></TableCell>
+                            <TableCell>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusInfo.class}`}>{statusInfo.label}</span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreVertical className="h-4 w-4" /></Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {a.status === "DRAFT" && (
+                                    <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("publish"); }}>
+                                      <Send className="h-4 w-4 mr-2 text-blue-500" />Publish
+                                    </DropdownMenuItem>
+                                  )}
+                                  {a.status === "PUBLISHED" && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("complete"); }}>
+                                        <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Mark as Completed
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
+                                        <FileText className="h-4 w-4 mr-2" />{a._count?.results ?? 0} result{a._count?.results !== 1 ? "s" : ""} entered
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {a.status === "COMPLETED" && (
+                                    <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                                      <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Finalised — included in report cards
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </>
               )}
             </CardContent>
             {!loading && filtered.length > 0 && meta.totalPages > 1 && (
@@ -568,8 +716,8 @@ export default function AdminAssessmentsPage() {
 
         {/* ── Entry Windows tab ── */}
         <TabsContent value="windows" className="space-y-4 mt-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 px-4 py-3 flex-1 mr-4">
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 px-4 py-3 flex-1 lg:mr-4">
               <CalendarClock className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
               <p className="text-sm text-blue-800 dark:text-blue-300">
                 Entry windows control when teachers can publish assessments and enter results.
@@ -585,13 +733,29 @@ export default function AdminAssessmentsPage() {
           <Card>
             <CardContent className="p-0">
               {windowsLoading ? (
-                <div className="p-6 space-y-3">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-40" /><Skeleton className="h-4 w-40" /><Skeleton className="h-5 w-20 rounded-full ml-auto" />
-                    </div>
-                  ))}
-                </div>
+                <>
+                  {/* Mobile skeleton — mirrors the card rows below */}
+                  <div className="lg:hidden divide-y">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-start justify-between gap-3 p-3">
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-4 w-36" />
+                          <Skeleton className="h-3 w-44" />
+                          <Skeleton className="h-4 w-16 rounded" />
+                        </div>
+                        <Skeleton className="h-8 w-16 rounded-md shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Desktop skeleton — mirrors the table columns */}
+                  <div className="hidden lg:block p-6 space-y-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4">
+                        <Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-40" /><Skeleton className="h-4 w-40" /><Skeleton className="h-5 w-20 rounded-full ml-auto" />
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : windows.length === 0 ? (
                 <Empty className="py-20">
                   <EmptyContent>
@@ -603,44 +767,75 @@ export default function AdminAssessmentsPage() {
                   </EmptyContent>
                 </Empty>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Term</TableHead>
-                      <TableHead>Exam Type</TableHead>
-                      <TableHead>Opens At</TableHead>
-                      <TableHead>Closes At</TableHead>
-                      <TableHead>State</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* ── Mobile: card rows ────────────────────────────────── */}
+                  <div className="lg:hidden divide-y">
                     {windows.map((w) => {
                       const state = windowState(w);
                       return (
-                        <TableRow key={w.id}>
-                          <TableCell className="text-sm font-medium">
-                            {formatTermLabel(w.term.termType)}{w.term.academicYear ? ` · ${w.term.academicYear.year}` : ""}
-                          </TableCell>
-                          <TableCell><span className="text-sm">{EXAM_LABELS[w.examType]}</span></TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{new Date(w.opensAt).toLocaleString()}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{new Date(w.closesAt).toLocaleString()}</TableCell>
-                          <TableCell><WindowStateBadge state={state} /></TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditingWindow(w); setWindowDialogOpen(true); }}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteWindowTarget(w)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                        <div key={w.id} className="flex items-start justify-between gap-3 p-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">
+                              {formatTermLabel(w.term.termType)}{w.term.academicYear ? ` · ${w.term.academicYear.year}` : ""} · {EXAM_LABELS[w.examType]}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {new Date(w.opensAt).toLocaleDateString()} – {new Date(w.closesAt).toLocaleDateString()}
+                            </p>
+                            <div className="mt-1.5"><WindowStateBadge state={state} /></div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditingWindow(w); setWindowDialogOpen(true); }}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteWindowTarget(w)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </div>
+
+                  {/* ── Desktop: full table — unchanged ─────────────────── */}
+                  <Table className="hidden lg:table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Term</TableHead>
+                        <TableHead>Exam Type</TableHead>
+                        <TableHead>Opens At</TableHead>
+                        <TableHead>Closes At</TableHead>
+                        <TableHead>State</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {windows.map((w) => {
+                        const state = windowState(w);
+                        return (
+                          <TableRow key={w.id}>
+                            <TableCell className="text-sm font-medium">
+                              {formatTermLabel(w.term.termType)}{w.term.academicYear ? ` · ${w.term.academicYear.year}` : ""}
+                            </TableCell>
+                            <TableCell><span className="text-sm">{EXAM_LABELS[w.examType]}</span></TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{new Date(w.opensAt).toLocaleString()}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{new Date(w.closesAt).toLocaleString()}</TableCell>
+                            <TableCell><WindowStateBadge state={state} /></TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditingWindow(w); setWindowDialogOpen(true); }}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteWindowTarget(w)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </>
               )}
             </CardContent>
           </Card>

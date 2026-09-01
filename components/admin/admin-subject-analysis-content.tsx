@@ -90,9 +90,20 @@ interface AdminSubjectAnalysisContentProps {
   termId: string;
   gradeName: string;
   subjectName: string;
+  subjectCode: string;
   convention?: "standard" | "form";
   assessmentType: "CAT" | "MID" | "EOT";
   onAssessmentTypeChange: (assessmentType: "CAT" | "MID" | "EOT") => void;
+}
+
+// ── Grade abbreviations (mobile Grade Distribution table) ────────────────────
+function abbreviateGrade(grade: string): string {
+  return grade
+    .replace(/Distinction/g, "Dist")
+    .replace(/\bMerit\b/g, "Mer")
+    .replace(/\bCredit\b/g, "Cre")
+    .replace(/\bUnsatisfactory\b/g, "Unsat")
+    .replace(/\bSatisfactory\b/g, "Sat");
 }
 
 export function AdminSubjectAnalysisContent({
@@ -101,6 +112,7 @@ export function AdminSubjectAnalysisContent({
   termId,
   gradeName,
   subjectName,
+  subjectCode,
   convention,
   assessmentType,
   onAssessmentTypeChange,
@@ -186,40 +198,56 @@ export function AdminSubjectAnalysisContent({
   if (loading) {
     return (
       <div className="space-y-4">
-        {/* Filter bar */}
-        <div className="flex gap-3 flex-wrap">
-          <Skeleton className="h-9 w-40" />
-          <Skeleton className="h-9 w-36" />
-          <Skeleton className="h-9 w-36" />
-          <Skeleton className="h-6 w-32 self-center" />
+        {/* Header controls — mobile: 2-row shape; desktop: 1-row shape */}
+        <div className="flex flex-col gap-2 lg:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-28" />
+          </div>
+          <Skeleton className="h-9 w-full" />
         </div>
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[0, 1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardContent className="pt-5 space-y-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-7 w-16" />
-                <Skeleton className="h-3 w-20" />
+        <div className="hidden lg:flex gap-3 flex-wrap items-center justify-between">
+          <Skeleton className="h-6 w-48" />
+          <div className="flex gap-3">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+        {/* Two-card grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-24 rounded-lg lg:hidden" />
+                <div className="hidden lg:grid grid-cols-3 gap-4">
+                  {[0, 1, 2].map(i => <Skeleton key={i} className="h-28 rounded-lg" />)}
+                </div>
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-14" />
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-10" />
+                      <Skeleton className="h-4 w-10" />
+                      <Skeleton className="h-4 w-12 ml-auto" />
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          ))}
+          </div>
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader><Skeleton className="h-5 w-32" /></CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-24 rounded-lg" />
+                <Skeleton className="h-24 rounded-lg" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
-        {/* Table */}
-        <Card>
-          <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
-          <CardContent className="space-y-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-4 w-8" />
-                <Skeleton className={`h-4 ${["w-36","w-28","w-40","w-32","w-36","w-28","w-40","w-32"][i]}`} />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-20 ml-auto" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -232,10 +260,96 @@ export function AdminSubjectAnalysisContent({
     );
   }
 
+  const handleDownloadPdf = async () => {
+    if (!analysisData) return;
+    setDownloading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      let schoolName: string | undefined;
+      let schoolLogoBase64: string | undefined;
+      try {
+        const res = await fetch("/api/admin/settings/school-info", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const info = json.data || json;
+          schoolName = info.settings?.name || undefined;
+          schoolLogoBase64 = info.logoBase64 || undefined;
+        }
+      } catch { /* non-fatal */ }
+      await downloadSubjectAnalysisPdf(analysisData, {
+        classOrGrade: gradeName,
+        assessmentType,
+        gradeLevelDescription: getGradeLevelDescription() || undefined,
+        schoolName,
+        schoolLogoBase64,
+        streamBreakdown: showStreamBreakdown && streamBreakdown.length > 0
+          ? streamBreakdown
+          : undefined,
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Page Header with Controls */}
-      <div className="flex items-start justify-between">
+      {/* ── Page Header with Controls — mobile: title+code far left / stream
+          toggle opposite end on row one, exam type filter spanning its own
+          full-width row underneath, PDF button on its own row. ─────────── */}
+      <div className="flex flex-col gap-2 lg:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-base font-bold truncate">
+              {getAssessmentLabel()} - {subjectCode}
+            </h2>
+            {analysisData && (
+              <span className="text-xs bg-muted px-2 py-1 rounded-md font-medium shrink-0">
+                {analysisData.totalClasses}{" "}
+                {analysisData.totalClasses === 1 ? "Stream" : "Streams"}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Switch
+              id="stream-breakdown-mobile"
+              checked={showStreamBreakdown}
+              onCheckedChange={setShowStreamBreakdown}
+            />
+            <Label htmlFor="stream-breakdown-mobile" className="text-xs">
+              Stream breakdown
+            </Label>
+          </div>
+        </div>
+
+        <Select value={assessmentType} onValueChange={onAssessmentTypeChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="CAT">CAT</SelectItem>
+            <SelectItem value="MID">Mid-Term</SelectItem>
+            <SelectItem value="EOT">End of Term</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          disabled={!analysisData || downloading}
+          onClick={handleDownloadPdf}
+        >
+          {downloading
+            ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            : <Download className="h-4 w-4 mr-2" />}
+          Download PDF
+        </Button>
+      </div>
+
+      {/* ── Desktop — unchanged ──────────────────────────────────────────── */}
+      <div className="hidden lg:flex items-start justify-between">
         <div className="flex flex-col space-y-1">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold">
@@ -283,38 +397,7 @@ export function AdminSubjectAnalysisContent({
             variant="outline"
             size="sm"
             disabled={!analysisData || downloading}
-            onClick={async () => {
-              if (!analysisData) return;
-              setDownloading(true);
-              try {
-                const token = localStorage.getItem("auth_token");
-                let schoolName: string | undefined;
-                let schoolLogoBase64: string | undefined;
-                try {
-                  const res = await fetch("/api/admin/settings/school-info", {
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-                  if (res.ok) {
-                    const json = await res.json();
-                    const info = json.data || json;
-                    schoolName = info.settings?.name || undefined;
-                    schoolLogoBase64 = info.logoBase64 || undefined;
-                  }
-                } catch { /* non-fatal */ }
-                await downloadSubjectAnalysisPdf(analysisData, {
-                  classOrGrade: gradeName,
-                  assessmentType,
-                  gradeLevelDescription: getGradeLevelDescription() || undefined,
-                  schoolName,
-                  schoolLogoBase64,
-                  streamBreakdown: showStreamBreakdown && streamBreakdown.length > 0
-                    ? streamBreakdown
-                    : undefined,
-                });
-              } finally {
-                setDownloading(false);
-              }
-            }}
+            onClick={handleDownloadPdf}
           >
             {downloading
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -345,18 +428,52 @@ export function AdminSubjectAnalysisContent({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side - Statistics Card */}
         <div className="lg:col-span-2">
-          <Card className="flex flex-col h-[calc(100vh-16rem)]">
+          <Card className="flex flex-col lg:h-[calc(100vh-16rem)]">
             <CardHeader>
               <CardTitle className="text-base">Assessment Statistics</CardTitle>
               <CardDescription className="text-xs">
                 Combined data from all streams in {gradeName}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="space-y-6 pr-4">
-                  {/* Student Counts */}
-                  <div className="grid grid-cols-3 gap-4">
+            <CardContent className="flex-1 lg:overflow-hidden">
+              <ScrollArea className="lg:h-full">
+                <div className="space-y-6 lg:pr-4">
+                  {/* Student Counts — Mobile: compact unified table */}
+                  <div className="lg:hidden border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted/50 border-b">
+                          <th className="py-2 px-3 text-left text-[11px] font-semibold text-muted-foreground"></th>
+                          <th className="py-2 px-2 text-center text-[11px] font-semibold">M</th>
+                          <th className="py-2 px-2 text-center text-[11px] font-semibold">F</th>
+                          <th className="py-2 px-2 text-center text-[11px] font-semibold">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-xs">
+                        <tr className="border-b">
+                          <td className="py-2.5 px-3 text-muted-foreground font-medium">Students</td>
+                          <td className="py-2.5 px-2 text-center font-medium">{analysisData?.totalStudents.male || 0}</td>
+                          <td className="py-2.5 px-2 text-center font-medium">{analysisData?.totalStudents.female || 0}</td>
+                          <td className="py-2.5 px-2 text-center font-bold">{analysisData?.totalStudents.total || 0}</td>
+                        </tr>
+                        <tr className="border-b bg-muted/20">
+                          <td className="py-2.5 px-3 text-muted-foreground font-medium">Recorded</td>
+                          <td className="py-2.5 px-2 text-center font-medium">{analysisData?.recordedEntries.male || 0}</td>
+                          <td className="py-2.5 px-2 text-center font-medium">{analysisData?.recordedEntries.female || 0}</td>
+                          <td className="py-2.5 px-2 text-center font-bold">{analysisData?.recordedEntries.total || 0}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3 text-muted-foreground font-medium">Absent</td>
+                          <td className="py-2.5 px-2 text-center font-medium">{analysisData?.absentStudents.male || 0}</td>
+                          <td className="py-2.5 px-2 text-center font-medium">{analysisData?.absentStudents.female || 0}</td>
+                          <td className="py-2.5 px-2 text-center font-bold">{analysisData?.absentStudents.total || 0}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Student Counts — Desktop: 3-card layout */}
+                  <div className="hidden lg:grid grid-cols-3 gap-4">
                     <div className="border rounded-lg p-4">
                       <h3 className="font-semibold mb-3 text-sm">
                         Total Students
@@ -453,7 +570,7 @@ export function AdminSubjectAnalysisContent({
                     <h3 className="font-semibold mb-3 text-sm">
                       Grade Distribution
                     </h3>
-                    <div className="border rounded-lg">
+                    <div className="border rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -481,8 +598,9 @@ export function AdminSubjectAnalysisContent({
                                 index % 2 === 0 ? "bg-background" : "bg-muted/30"
                               }
                             >
-                              <TableCell className="font-medium text-xs">
-                                {gradeItem.grade}
+                              <TableCell className="font-medium text-xs whitespace-nowrap">
+                                <span className="lg:hidden">{abbreviateGrade(gradeItem.grade)}</span>
+                                <span className="hidden lg:inline">{gradeItem.grade}</span>
                               </TableCell>
                               <TableCell className="text-xs">
                                 {gradeItem.range}
@@ -518,71 +636,67 @@ export function AdminSubjectAnalysisContent({
 
         {/* Right Side - Pass Analysis Card */}
         <div className="lg:col-span-1">
-          <Card className="h-[calc(100vh-16rem)] flex flex-col">
+          <Card className="flex flex-col lg:h-[calc(100vh-16rem)]">
             <CardHeader>
               <CardTitle className="text-base">Pass Analysis</CardTitle>
               <CardDescription className="text-xs">
                 Quantity and quality pass rates
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="space-y-6 pr-4">
-                  {/* Quantity Pass Analysis */}
-                  <div className="border rounded-lg p-4">
-                    <h3 className="font-semibold mb-4 text-sm">Quantity Pass</h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground text-xs">
-                          Students Passed:
-                        </span>
-                        <span className="text-lg font-bold">
-                          {analysisData?.quantityPass.passed}/
-                          {analysisData?.quantityPass.total}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground text-xs">
-                          Pass Rate:
-                        </span>
-                        <span className="text-sm font-bold text-green-600">
-                          {analysisData?.quantityPass.rate}%
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground pt-3 border-t">
-                        Formula: (Students passed ÷ Students who sat) × 100
-                      </p>
-                    </div>
+            <CardContent className="flex-1 flex flex-col space-y-6">
+              {/* Quantity Pass Analysis */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-4 text-sm">Quantity Pass</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs">
+                      Students Passed:
+                    </span>
+                    <span className="text-lg font-bold">
+                      {analysisData?.quantityPass.passed}/
+                      {analysisData?.quantityPass.total}
+                    </span>
                   </div>
-
-                  {/* Quality Pass Analysis */}
-                  <div className="border rounded-lg p-4">
-                    <h3 className="font-semibold mb-4 text-sm">Quality Pass</h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground text-xs">
-                          {analysisData?.gradeLevel === "JUNIOR" ? "Dist 1:" : "Dist 1&2:"}
-                        </span>
-                        <span className="text-lg font-bold">
-                          {analysisData?.qualityPass.qualityPasses}/
-                          {analysisData?.qualityPass.totalPassed}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground text-xs">
-                          Quality Rate:
-                        </span>
-                        <span className="text-sm font-bold text-blue-600">
-                          {analysisData?.qualityPass.rate}%
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground pt-3 border-t">
-                        Formula: ({analysisData?.gradeLevel === "JUNIOR" ? "Distinction 1" : "Distinction 1&2"} ÷ Students passed) × 100
-                      </p>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs">
+                      Pass Rate:
+                    </span>
+                    <span className="text-sm font-bold text-green-600">
+                      {analysisData?.quantityPass.rate}%
+                    </span>
                   </div>
+                  <p className="text-xs text-muted-foreground pt-3 border-t">
+                    Formula: (Students passed ÷ Students who sat) × 100
+                  </p>
                 </div>
-              </ScrollArea>
+              </div>
+
+              {/* Quality Pass Analysis */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-4 text-sm">Quality Pass</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs">
+                      {analysisData?.gradeLevel === "JUNIOR" ? "Dist 1:" : "Dist 1&2:"}
+                    </span>
+                    <span className="text-lg font-bold">
+                      {analysisData?.qualityPass.qualityPasses}/
+                      {analysisData?.qualityPass.totalPassed}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs">
+                      Quality Rate:
+                    </span>
+                    <span className="text-sm font-bold text-blue-600">
+                      {analysisData?.qualityPass.rate}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pt-3 border-t">
+                    Formula: ({analysisData?.gradeLevel === "JUNIOR" ? "Distinction 1" : "Distinction 1&2"} ÷ Students passed) × 100
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

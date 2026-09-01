@@ -219,8 +219,8 @@ export default function SchoolInfoPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3"><Skeleton className="h-9 w-20" /><Skeleton className="h-7 w-48" /></div>
+      <div className="space-y-6 px-4 lg:px-0">
+        <div className="flex items-center gap-3 mt-5 lg:mt-0"><Skeleton className="h-9 w-20" /><Skeleton className="h-7 w-48" /></div>
         <Card><CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="space-y-1.5">
@@ -239,25 +239,27 @@ export default function SchoolInfoPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mt-1">
+    <div className="space-y-6 px-4 lg:px-0">
+      {/* Header — title hidden on mobile (top bar shows "School Info");
+          Save button becomes icon-only there. */}
+      <div className="flex items-start justify-between mt-5 lg:mt-1">
         <Link href="/admin/settings">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Settings
+            <span className="hidden sm:inline">Back to Settings</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         </Link>
         <div className="flex items-center gap-3">
-          <div className="text-right">
+          <div className="hidden lg:block text-right">
             <h1 className="text-xl font-bold">School Information</h1>
             <p className="text-sm text-muted-foreground">
               Configure school details and contact information
             </p>
           </div>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
+          <Button onClick={handleSave} disabled={saving} size="icon" className="lg:h-9 lg:w-auto lg:px-4 lg:py-2">
+            <Save className="h-4 w-4 lg:mr-2" />
+            <span className="hidden lg:inline">{saving ? "Saving..." : "Save Changes"}</span>
           </Button>
         </div>
       </div>
@@ -466,7 +468,7 @@ export default function SchoolInfoPage() {
             {/* Logo Preview */}
             {logoUrl && (
               <div className="flex justify-center">
-                <div className="relative w-40 h-40 border-2 border-gray-200 rounded-lg overflow-hidden bg-white">
+                <div className="relative w-28 h-28 lg:w-40 lg:h-40 border-2 border-gray-200 rounded-lg overflow-hidden bg-white">
                   <Image
                     src={logoUrl}
                     alt="School Logo"
@@ -479,7 +481,7 @@ export default function SchoolInfoPage() {
             )}
 
             {/* Upload Section */}
-            <div className="border-2 border-dashed rounded-lg p-6">
+            <div className="border-2 border-dashed rounded-lg p-4 lg:p-6">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -488,8 +490,8 @@ export default function SchoolInfoPage() {
                 className="hidden"
               />
 
-              <div className="flex flex-col items-center gap-4">
-                <ImageIcon className="h-12 w-12 text-muted-foreground" />
+              <div className="flex flex-col items-center gap-3 lg:gap-4">
+                <ImageIcon className="h-8 w-8 lg:h-12 lg:w-12 text-muted-foreground" />
                 <div className="text-center">
                   <p className="text-sm font-medium mb-1">
                     {logoUrl ? "Change School Logo" : "Upload School Logo"}
@@ -499,7 +501,7 @@ export default function SchoolInfoPage() {
                   </p>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   <Button
                     type="button"
                     variant="outline"

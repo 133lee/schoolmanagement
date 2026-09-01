@@ -305,14 +305,14 @@ export function StudentForm({
                               .split("T")[0]
                           }
                           min={
-                            new Date(new Date().getFullYear() - 25, 0, 1)
+                            new Date(new Date().getFullYear() - 50, 0, 1)
                               .toISOString()
                               .split("T")[0]
                           }
                         />
                       </FormControl>
                       <FormDescription>
-                        Student must be between 3 and 25 years old
+                        Student must be between 3 and 50 years old
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

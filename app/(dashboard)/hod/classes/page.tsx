@@ -209,7 +209,7 @@ export default function HodClassesPage() {
                 onOpenChange={(open) =>
                   setActiveMobileFilter(open ? "grade" : null)
                 }>
-                <SelectTrigger className={activeMobileFilter === "grade" ? "w-fit" : "w-full"}>
+                <SelectTrigger className={activeMobileFilter === "grade" ? "w-fit max-w-full" : "w-full"}>
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
                 <SelectContent>

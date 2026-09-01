@@ -317,6 +317,7 @@ model TeacherProfile {
   timetableConfigurations   TimetableConfiguration[]
   timetableSlots            TimetableSlot[]
   permissionGrants          UserPermission[]           @relation("PermissionGrants")
+  lessonLogs                LessonLog[]
 
   @@index([staffNumber])
   @@index([status])
@@ -439,9 +440,6 @@ model TimetableConfiguration {
   periodsBeforeBreak      Int
   periodsAfterBreak       Int
   totalPeriods            Int
-  allowSubjectPreferences Boolean         @default(false)
-  allowTeacherPreferences Boolean         @default(false)
-  autoAssignRooms         Boolean         @default(true)
   doublePeriodConfigs     Json?
   lastGeneratedAt         DateTime?
   generatedById           String?
@@ -470,6 +468,7 @@ model TimetableSlot {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   attendanceRecords AttendanceRecord[]
+  lessonLogs        LessonLog[]
   academicYear      AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   class             Class              @relation(fields: [classId], references: [id], onDelete: Cascade)
   subject           Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -482,6 +481,23 @@ model TimetableSlot {
   @@index([academicYearId])
   @@index([roomId])
   @@map("timetable_slots")
+}
+
+model LessonLog {
+  id              String         @id @default(cuid())
+  timetableSlotId String
+  date            DateTime
+  topic           String
+  subtopics       String?
+  createdById     String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  timetableSlot   TimetableSlot  @relation(fields: [timetableSlotId], references: [id], onDelete: Cascade)
+  createdBy       TeacherProfile @relation(fields: [createdById], references: [id])
+
+  @@unique([timetableSlotId, date])
+  @@index([timetableSlotId])
+  @@map("lesson_logs")
 }
 
 model Room {

@@ -204,3 +204,13 @@ first diagnosing why Phase 1 didn't work** — re-shipping the same broken mecha
 classification of the entire API surface, the data-layer transaction/migration issues, the frontend
 dead-code inventory, and a phased remediation plan. If you're unsure whether something is an
 established pattern or a past mistake, check there before assuming the existing code is right.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

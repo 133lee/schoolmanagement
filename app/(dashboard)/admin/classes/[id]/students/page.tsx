@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { formatClassLabel } from "@/lib/utils";
+import { formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -750,7 +750,7 @@ export default function ClassStudentsPage() {
                       <SelectItem key={cls.id} value={cls.id} disabled={isFull}>
                         <div className="flex items-center justify-between w-full">
                           <span>
-                            {formatClassLabel(cls.grade.name, cls.name)}
+                            {formatCompactClassLabel(cls.grade.name, cls.name)}
                           </span>
                           <span className="text-xs text-muted-foreground ml-2">
                             ({enrolled}/{cls.capacity})

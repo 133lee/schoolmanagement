@@ -48,6 +48,7 @@ import { useParents } from "@/hooks/useParents";
 import { ParentStatus } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +76,11 @@ export default function ParentsManagement() {
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   const [smsMode, setSmsMode] = useState<"bulk" | "targeted">("bulk");
   const [smsParent, setSmsParent] = useState<any>(null);
+
+  // Mobile-only: which of the row-one filters is currently focused/open.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "status" | null
+  >(null);
 
   // Use the parents hook with filters and pagination
   const { parents, meta, isLoading, error, refetch, deleteParent } = useParents(
@@ -170,18 +176,21 @@ export default function ParentsManagement() {
 
   return (
     <div className="px-4 lg:px-0 space-y-6">
-      {/* Page Header — title/description hidden on mobile, actions stay */}
-      <div className="flex items-start justify-between mt-2">
+      {/* Page Header — title/description hidden on mobile, actions stay.
+          Extra top margin on mobile since the buttons become the first
+          visible thing under the sticky top bar once the title is hidden. */}
+      <div className="flex items-start justify-between mt-5 lg:mt-2">
         <div className="hidden lg:flex flex-col space-y-2">
           <h1 className="text-xl font-bold">Parents Management</h1>
           <p className="text-muted-foreground text-sm">
             Manage parent and guardian information
           </p>
         </div>
-        {/* flex-1 so this fills the rest of the row — the internal
-            justify-between then pushes "Add Parent" to the true far right,
-            separate from the other action buttons. */}
-        <div className="flex items-center justify-between flex-1 gap-2">
+        {/* flex-1 on mobile so this fills the rest of the row (title is
+            hidden there); on desktop it must NOT grow, or its own internal
+            justify-between spreads the action buttons apart instead of
+            grouping them together opposite the title. */}
+        <div className="flex items-center justify-between flex-1 gap-2 lg:flex-none lg:justify-start">
           <div className="flex gap-2">
             {/* Desktop only — mobile gets an icon-only refresh next to the notification bell instead */}
             <Button
@@ -201,10 +210,15 @@ export default function ParentsManagement() {
                 setSmsParent(null);
                 setSmsDialogOpen(true);
               }}>
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Send SMS
+              <MessageSquare className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Send SMS</span>
             </Button>
-            <Button variant="outline" disabled title="Bulk parent import coming soon — guardians require student linking">
+            {/* Disabled/"coming soon" — dead weight on mobile */}
+            <Button
+              variant="outline"
+              disabled
+              className="hidden lg:inline-flex"
+              title="Bulk parent import coming soon — guardians require student linking">
               <Download className="h-4 w-4 mr-2" />
               Import
             </Button>
@@ -221,7 +235,52 @@ export default function ParentsManagement() {
       {/* Main Content */}
       <Card className="flex flex-col h-[calc(100vh-12rem)]">
         <CardHeader>
-          <div className="flex gap-3">
+          {/* ── Mobile filters: search + status share the one row, the
+              focused one grows by its own content, the other shrinks. ──── */}
+          <div className="flex lg:hidden gap-2">
+            <div
+              className={cn(
+                "relative min-w-0 transition-all duration-200",
+                activeMobileFilter === "search" ? "flex-[3]" : "flex-1"
+              )}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setActiveMobileFilter("search")}
+                onBlur={() => setActiveMobileFilter(null)}
+              />
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "status" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as ParentStatus | "all")
+                }
+                onOpenChange={(open) => setActiveMobileFilter(open ? "status" : null)}>
+                <SelectTrigger className={cn(activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full")}>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value={ParentStatus.ACTIVE}>Active</SelectItem>
+                  <SelectItem value={ParentStatus.INACTIVE}>Inactive</SelectItem>
+                  <SelectItem value={ParentStatus.DECEASED}>Deceased</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* ── Desktop filters — unchanged ─────────────────────────────── */}
+          <div className="hidden lg:flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input

@@ -44,6 +44,8 @@ import { SubjectSheet } from "@/components/subjects/subject-sheet";
 import { ImportSubjectsDialog } from "@/components/subjects/import-subjects-dialog";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useToast } from "@/hooks/use-toast";
+import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +75,11 @@ export default function SubjectsManagement() {
   const [subjectToDelete, setSubjectToDelete] = useState<any>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
+  // Mobile-only: which of the row-one filters is currently focused/open.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "department" | null
+  >(null);
+
   // Use the subjects hook with filters and pagination
   const { subjects, meta, isLoading, error, refetch, deleteSubject } =
     useSubjects(
@@ -90,6 +97,9 @@ export default function SubjectsManagement() {
       description: "Subject list has been refreshed",
     });
   };
+
+  // Mobile: the top-bar refresh icon calls this instead of the desktop button.
+  useMobileHeaderRefresh(handleRefresh, isLoading);
 
   const handleDeleteClick = (subject: any) => {
     setSubjectToDelete(subject);
@@ -163,30 +173,39 @@ export default function SubjectsManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between mt-2">
-        <div className="flex flex-col space-y-2">
+    <div className="px-4 lg:px-0 space-y-6">
+      {/* Page Header — title/description hidden on mobile (top bar shows
+          "Subjects"); mobile gets an icon-only refresh next to the
+          notification bell instead of the inline Refresh button. */}
+      <div className="flex items-start justify-between mt-5 lg:mt-2">
+        <div className="hidden lg:flex flex-col space-y-2">
           <h1 className="text-xl font-bold">Subjects Management</h1>
           <p className="text-muted-foreground text-sm">
             Manage subjects and course information
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isLoading}>
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setImportDialogOpen(true)}>
-            <Download className="h-4 w-4 mr-2" />
-            Import
-          </Button>
-          <Button className="flex-1 sm:flex-none" asChild>
+        {/* flex-1 on mobile so this fills the rest of the row (title is
+            hidden there); on desktop it must NOT grow, or its own internal
+            justify-between spreads the action buttons apart instead of
+            grouping them together opposite the title. */}
+        <div className="flex items-center justify-between flex-1 gap-2 lg:flex-none lg:justify-start">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="hidden lg:inline-flex"
+              onClick={handleRefresh}
+              disabled={isLoading}>
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </Button>
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Download className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+          </div>
+          <Button className="shrink-0" asChild>
             <Link href="/admin/subjects/new">
               <Plus className="h-4 w-4 mr-2" />
               Add Subject
@@ -198,7 +217,48 @@ export default function SubjectsManagement() {
       {/* Main Content */}
       <Card className="flex flex-col h-[calc(100vh-12rem)]">
         <CardHeader>
-          <div className="flex gap-3">
+          {/* ── Mobile filters: search + department share row one, the
+              focused one grows by its own content, the other shrinks. ── */}
+          <div className="flex lg:hidden gap-2">
+            <div
+              className={cn(
+                "relative min-w-0 transition-all duration-200",
+                activeMobileFilter === "search" ? "flex-[3]" : "flex-1"
+              )}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setActiveMobileFilter("search")}
+                onBlur={() => setActiveMobileFilter(null)}
+              />
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "department" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={departmentFilter}
+                onValueChange={(value) => setDepartmentFilter(value)}
+                onOpenChange={(open) => setActiveMobileFilter(open ? "department" : null)}>
+                <SelectTrigger className={activeMobileFilter === "department" ? "w-fit max-w-full" : "w-full"}>
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {/* TODO: Populate with actual departments from API */}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* ── Desktop filters — unchanged ─────────────────────────────── */}
+          <div className="hidden lg:flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -231,17 +291,29 @@ export default function SubjectsManagement() {
           )}
 
           {isLoading ? (
-            <div className="space-y-3 pt-2">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-4 w-16 ml-auto" />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="lg:hidden space-y-2 pt-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-md border p-3">
+                    <Skeleton className="h-4 w-4 shrink-0" />
+                    <Skeleton className="h-4 w-20 flex-1" />
+                    <Skeleton className="h-4 w-6 shrink-0" />
+                    <Skeleton className="h-8 w-8 rounded shrink-0" />
+                  </div>
+                ))}
+              </div>
+              <div className="hidden lg:block space-y-3 pt-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-16 ml-auto" />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : subjects.length === 0 ? (
             <Empty className="h-96">
               <EmptyContent>

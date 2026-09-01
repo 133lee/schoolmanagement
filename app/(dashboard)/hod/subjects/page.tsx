@@ -174,7 +174,7 @@ export default function HodSubjectsPage() {
                 value={assignmentFilter}
                 onValueChange={(v) => { setAssignmentFilter(v as AssignmentFilter); setPage(1); }}
                 onOpenChange={(open) => setActiveMobileFilter(open ? "assignment" : null)}>
-                <SelectTrigger className={activeMobileFilter === "assignment" ? "w-fit" : "w-full"}>
+                <SelectTrigger className={activeMobileFilter === "assignment" ? "w-fit max-w-full" : "w-full"}>
                   <SelectValue placeholder="All subjects" />
                 </SelectTrigger>
                 <SelectContent>
