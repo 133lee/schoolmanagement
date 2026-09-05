@@ -8,11 +8,15 @@ const { createServer } = require("http");
 const { parse } = require("url");
 const next = require("next");
 
-const dev = process.env.NODE_ENV !== "production";
+// This file exists solely as a production entry point for hosts that need
+// one bound to a platform-assigned port — local development always goes
+// through `next dev` instead, never this file — so it must never fall back
+// to dev mode, regardless of whether the host's environment sets NODE_ENV
+// (this host's panel has no way to set it at all).
 const hostname = "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
 
-const app = next({ dev, hostname, port });
+const app = next({ dev: false, hostname, port });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
