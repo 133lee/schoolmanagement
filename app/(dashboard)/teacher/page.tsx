@@ -46,7 +46,7 @@ interface TimetableSlot {
   periodNumber: number;
   startTime: string;
   endTime: string;
-  subject: { id: string; name: string };
+  subject: { id: string; name: string; code: string };
   class: { id: string; name: string; grade: { name: string } };
   roomNumber?: string | null;
 }
@@ -147,7 +147,11 @@ function PeriodRow({ slot }: { slot: TimetableSlot }) {
       {/* Details */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <p className="font-semibold text-sm truncate">{slot.subject.name}</p>
+          {/* Full name on desktop; code only on mobile — a long subject name
+              here would wrap the row onto two lines and grow this card
+              (and the layout below it) on small screens. */}
+          <p className="font-semibold text-sm truncate hidden lg:block">{slot.subject.name}</p>
+          <p className="font-semibold text-sm truncate lg:hidden">{slot.subject.code}</p>
           {now && (
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold shrink-0">
               <span className="size-1.5 rounded-full bg-primary-foreground animate-pulse" />

@@ -10,7 +10,13 @@ import {
   Users,
   TrendingUp,
   RefreshCw,
+  Download,
+  CalendarDays,
 } from "lucide-react";
+import {
+  downloadAttendanceReportPdf,
+  downloadDailyAttendanceReportPdf,
+} from "@/lib/pdf/attendance-report-pdf";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -57,6 +63,7 @@ interface AttendanceDataPoint {
 
 interface ClassBreakdown {
   className: string;
+  gradeName?: string;
   totalStudents: number;
   maleCount: number;
   femaleCount: number;
@@ -86,6 +93,12 @@ export default function AdminAttendanceAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingDailyPdf, setDownloadingDailyPdf] = useState(false);
+  const [dailyReportDate, setDailyReportDate] = useState(() =>
+    new Date().toISOString().split("T")[0]
+  );
+  const [dailyReportWholeSchool, setDailyReportWholeSchool] = useState(false);
 
   // Calculate date range (last 90 days)
   const endDate = new Date();
@@ -280,6 +293,160 @@ export default function AdminAttendanceAnalyticsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGrade, selectedClass, viewMode, showClassBreakdown]);
 
+  const scopeLabel =
+    viewMode === "grade"
+      ? grades.find((g) => g.id === selectedGrade)?.name || "Grade"
+      : classes.find((c) => c.id === selectedClass)?.name || "Class";
+
+  const fetchSchoolBranding = async (): Promise<{
+    schoolName?: string;
+    schoolLogoBase64?: string;
+  }> => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch("/api/admin/settings/school-info", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const info = json.data || json;
+        return {
+          schoolName: info.settings?.name || undefined,
+          schoolLogoBase64: info.logoBase64 || undefined,
+        };
+      }
+    } catch { /* non-fatal */ }
+    return {};
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!summary || attendanceData.length === 0) return;
+    setDownloadingPdf(true);
+    try {
+      const { schoolName, schoolLogoBase64 } = await fetchSchoolBranding();
+
+      await downloadAttendanceReportPdf(
+        {
+          scopeLabel,
+          summary: {
+            totalStudents: summary.totalStudents,
+            maleStudents: summary.maleStudents,
+            femaleStudents: summary.femaleStudents,
+            averageAttendanceRate: summary.averageAttendanceRate,
+          },
+          dailyData: attendanceData.map((d) => ({
+            date: d.date,
+            male: d.male,
+            female: d.female,
+            total: d.total,
+            totalPresent: d.totalPresent,
+            attendanceRate: d.attendanceRate,
+          })),
+          classBreakdown:
+            showClassBreakdown && classBreakdown.length > 0
+              ? classBreakdown.map((c) => ({
+                  className: c.className,
+                  totalStudents: c.totalStudents,
+                  maleCount: c.maleCount,
+                  femaleCount: c.femaleCount,
+                  totalPresent: c.totalPresent,
+                  totalAbsent: c.totalAbsent,
+                  attendanceRate: c.attendanceRate,
+                }))
+              : undefined,
+        },
+        { startDate, endDate, schoolName, schoolLogoBase64 }
+      );
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const handleDownloadDailyPdf = async () => {
+    const hasScope =
+      dailyReportWholeSchool ||
+      (viewMode === "grade" ? !!selectedGrade : !!selectedClass);
+    if (!hasScope || !dailyReportDate) return;
+    setDownloadingDailyPdf(true);
+    try {
+      const day = new Date(`${dailyReportDate}T00:00:00`);
+      const dayEnd = new Date(`${dailyReportDate}T23:59:59`);
+      const params = new URLSearchParams({
+        startDate: day.toISOString(),
+        endDate: dayEnd.toISOString(),
+      });
+      if (dailyReportWholeSchool) {
+        params.append("includeClassBreakdown", "true");
+      } else if (viewMode === "grade" && selectedGrade) {
+        params.append("gradeId", selectedGrade);
+        params.append("includeClassBreakdown", "true");
+      } else if (viewMode === "class" && selectedClass) {
+        params.append("classId", selectedClass);
+      }
+
+      const response = await api.get(
+        `/admin/attendance/analytics?${params.toString()}`
+      );
+      const resData = response.data || response;
+
+      let classRows: Array<{
+        className: string;
+        gradeName?: string;
+        totalStudents: number;
+        maleCount: number;
+        femaleCount: number;
+        totalPresent: number;
+        totalAbsent: number;
+        attendanceRate: number;
+      }>;
+
+      if ((dailyReportWholeSchool || viewMode === "grade") && resData.classBreakdown) {
+        classRows = (resData.classBreakdown as ClassBreakdown[]).map((row) => ({
+          className: row.className,
+          gradeName: row.gradeName,
+          totalStudents: row.totalStudents,
+          maleCount: row.maleCount,
+          femaleCount: row.femaleCount,
+          totalPresent: row.totalPresent,
+          totalAbsent: row.totalAbsent,
+          attendanceRate: row.attendanceRate,
+        }));
+      } else {
+        const day0 = resData.trend?.dailyData?.[0];
+        const className =
+          classes.find((cls) => cls.id === selectedClass)?.name || scopeLabel;
+        classRows = day0
+          ? [
+              {
+                className,
+                totalStudents: day0.total,
+                maleCount: day0.male,
+                femaleCount: day0.female,
+                totalPresent: day0.totalPresent,
+                totalAbsent: day0.totalAbsent ?? day0.total - day0.totalPresent,
+                attendanceRate: day0.attendanceRate,
+              },
+            ]
+          : [];
+      }
+
+      const { schoolName, schoolLogoBase64 } = await fetchSchoolBranding();
+      const reportScopeLabel = dailyReportWholeSchool ? "All Grades" : scopeLabel;
+
+      await downloadDailyAttendanceReportPdf(
+        {
+          scopeLabel: reportScopeLabel,
+          date: day,
+          classRows,
+          showGradeColumn: dailyReportWholeSchool,
+        },
+        { schoolName, schoolLogoBase64 }
+      );
+    } finally {
+      setDownloadingDailyPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -290,16 +457,70 @@ export default function AdminAttendanceAnalyticsPage() {
             View attendance trends and patterns by grade or class
           </p>
         </div>
-        <Button
-          onClick={fetchAttendanceData}
-          variant="outline"
-          size="sm"
-          disabled={dataLoading}>
-          <RefreshCw
-            className={`h-4 w-4 mr-2 ${dataLoading ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <div className="relative">
+              <CalendarDays className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="date"
+                value={dailyReportDate}
+                onChange={(e) => setDailyReportDate(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                className="h-9 rounded-md border border-input bg-background pl-7 pr-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 rounded-md border border-input bg-background px-2.5 h-9">
+              <input
+                type="checkbox"
+                id="daily-whole-school"
+                checked={dailyReportWholeSchool}
+                onChange={(e) => setDailyReportWholeSchool(e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              <Label htmlFor="daily-whole-school" className="text-sm whitespace-nowrap">
+                Whole school
+              </Label>
+            </div>
+            <Button
+              onClick={handleDownloadDailyPdf}
+              variant="outline"
+              size="sm"
+              disabled={
+                downloadingDailyPdf ||
+                (!dailyReportWholeSchool &&
+                  (viewMode === "grade" ? !selectedGrade : !selectedClass))
+              }>
+              {downloadingDailyPdf ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Daily Report
+            </Button>
+          </div>
+          <Button
+            onClick={handleDownloadPdf}
+            variant="outline"
+            size="sm"
+            disabled={downloadingPdf || !summary || attendanceData.length === 0}>
+            {downloadingPdf ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Trend PDF (90d)
+          </Button>
+          <Button
+            onClick={fetchAttendanceData}
+            variant="outline"
+            size="sm"
+            disabled={dataLoading}>
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${dataLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Error State */}

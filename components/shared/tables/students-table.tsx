@@ -61,6 +61,15 @@ interface StudentsTableProps {
    *  that aren't already self-identifying (Form 1–5 names keep their own
    *  name, unprefixed). Desktop table is unaffected either way. */
   compactMobileClassLabel?: boolean;
+  /** Mobile card only: omit the avatar circle to keep the row tighter.
+   *  Desktop table always keeps its avatar either way. */
+  hideMobileAvatar?: boolean;
+  /** Mobile card only: omit the class-label badge next to the name. On a
+   *  crowded row (avatar + name + class badge + status badge + actions),
+   *  the class badge was stealing enough width to truncate the name down
+   *  to a couple of characters — dropping it gives the name its space
+   *  back. Desktop table always keeps its class column either way. */
+  hideMobileClassBadge?: boolean;
 }
 
 const statusVariants: Record<StudentStatus, "default" | "secondary" | "destructive" | "outline"> = {
@@ -82,6 +91,8 @@ export function StudentsTable({
   onLinkGuardian,
   showActions = true,
   compactMobileClassLabel = false,
+  hideMobileAvatar = false,
+  hideMobileClassBadge = false,
 }: StudentsTableProps) {
   // Helper to get student full name
   const getFullName = (student: ExtendedStudent) => {
@@ -178,17 +189,21 @@ export function StudentsTable({
               onClick={() => onRowClick(student)}
               className="flex items-center gap-3 p-3 active:bg-muted/70 transition-colors cursor-pointer"
             >
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarImage src={student.photoUrl} alt={getFullName(student)} />
-                <AvatarFallback>
-                  {student.firstName?.[0]}{student.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
+              {!hideMobileAvatar && (
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={student.photoUrl} alt={getFullName(student)} />
+                  <AvatarFallback>
+                    {student.firstName?.[0]}{student.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="flex-1 flex items-center justify-between gap-3 min-w-0">
                 <p className="font-semibold text-sm truncate flex-1 min-w-0">{getFullName(student)}</p>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium shrink-0 max-w-24 truncate">
-                  {classLabel}
-                </Badge>
+                {!hideMobileClassBadge && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium shrink-0 max-w-24 truncate">
+                    {classLabel}
+                  </Badge>
+                )}
                 <Badge variant={statusVariants[student.status]} className="text-[10px] px-1.5 py-0 shrink-0">
                   {student.status}
                 </Badge>

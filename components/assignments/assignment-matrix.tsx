@@ -83,7 +83,7 @@ export function AssignmentMatrix({
       <table className="w-full border-separate border-spacing-0">
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border min-w-[160px]">
+            <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border min-w-[90px] lg:min-w-[160px]">
               Subject
             </th>
             {classes.map((cls) => (

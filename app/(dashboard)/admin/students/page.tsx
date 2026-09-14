@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -66,6 +67,10 @@ export default function StudentsPage() {
     "all"
   );
   const [genderFilter, setGenderFilter] = useState<Gender | "all">("all");
+  // Mobile-only: which of the row-one filters is currently focused/open.
+  const [activeMobileFilter, setActiveMobileFilter] = useState<
+    "search" | "gender" | null
+  >(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null
@@ -237,7 +242,68 @@ export default function StudentsPage() {
       {/* Main Content */}
       <Card className="flex flex-col h-[calc(100vh-12rem)]">
         <CardHeader>
-          <div className="flex gap-3">
+          {/* ── Mobile filters: search + gender share row one, the
+              focused one grows by its own content; status gets its
+              own full-width row underneath. ─────────────────────── */}
+          <div className="flex lg:hidden gap-2">
+            <div
+              className={cn(
+                "relative min-w-0 transition-all duration-200",
+                activeMobileFilter === "search" ? "flex-[3]" : "flex-1"
+              )}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setActiveMobileFilter("search")}
+                onBlur={() => setActiveMobileFilter(null)}
+              />
+            </div>
+            <div
+              className={cn(
+                "min-w-0 transition-all duration-200",
+                activeMobileFilter === "gender" ? "flex-none max-w-[70%]" : "flex-1"
+              )}
+            >
+              <Select
+                value={genderFilter}
+                onValueChange={(value) => setGenderFilter(value as Gender | "all")}
+                onOpenChange={(open) => setActiveMobileFilter(open ? "gender" : null)}>
+                <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit max-w-full" : "w-full"}>
+                  <SelectValue placeholder="Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Genders</SelectItem>
+                  <SelectItem value={Gender.MALE}>Male</SelectItem>
+                  <SelectItem value={Gender.FEMALE}>Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="lg:hidden mt-2">
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as StudentStatus | "all")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value={StudentStatus.ACTIVE}>Active</SelectItem>
+                <SelectItem value={StudentStatus.SUSPENDED}>Suspended</SelectItem>
+                <SelectItem value={StudentStatus.GRADUATED}>Graduated</SelectItem>
+                <SelectItem value={StudentStatus.WITHDRAWN}>Withdrawn</SelectItem>
+                <SelectItem value={StudentStatus.TRANSFERRED}>Transferred</SelectItem>
+                <SelectItem value={StudentStatus.DECEASED}>Deceased</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ── Desktop filters — unchanged ─────────────────────── */}
+          <div className="hidden lg:flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -360,6 +426,7 @@ export default function StudentsPage() {
                 setEditDialogOpen(true);
               }}
               onDelete={handleDeleteClick}
+              hideMobileClassBadge
             />
           )}
         </CardContent>

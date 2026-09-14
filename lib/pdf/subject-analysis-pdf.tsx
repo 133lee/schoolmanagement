@@ -147,8 +147,7 @@ function SubjectAnalysisPdfDocument({
           )}
           <Text style={s.docTitle}>{data.subjectName} Analysis</Text>
           <Text style={s.docSubtitle}>
-            {meta.classOrGrade}  •  {assessmentLabel}
-            {meta.gradeLevelDescription ? `  •  ${meta.gradeLevelDescription}` : ""}
+            {meta.classOrGrade}  •  {assessmentLabel}  •  Subject Analysis
           </Text>
         </View>
 

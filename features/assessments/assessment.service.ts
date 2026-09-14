@@ -615,6 +615,37 @@ export class AssessmentService {
   }
 
   /**
+   * Reopen a completed assessment (undo completion). Symmetric with
+   * completeAssessment — anyone who can mark an assessment complete can
+   * also undo that, including a teacher correcting their own accidental
+   * click. There's no separate "admin override" tier: completion itself
+   * already isn't teacher-exclusive (requireMinimumRole(TEACHER) passes
+   * for HEAD_TEACHER/DEPUTY_HEAD/ADMIN too), so reopening mirrors the
+   * same rule rather than introducing a new one.
+   */
+  async reopenAssessment(
+    id: string,
+    context: ServiceContext
+  ): Promise<Assessment> {
+    requireMinimumRole(
+      context,
+      Role.TEACHER,
+      "You do not have permission to reopen assessments"
+    );
+
+    const assessment = await assessmentRepository.findById(id);
+    if (!assessment) {
+      throw new NotFoundError("Assessment not found");
+    }
+
+    if (assessment.status !== AssessmentStatus.COMPLETED) {
+      throw new ValidationError("Only completed assessments can be reopened");
+    }
+
+    return assessmentRepository.updateStatus(id, AssessmentStatus.PUBLISHED);
+  }
+
+  /**
    * Delete assessment
    */
   async deleteAssessment(

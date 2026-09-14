@@ -8,6 +8,7 @@ import {
 } from "@/app/api/assessments/[id]/route";
 import { POST as completeAssessment } from "@/app/api/assessments/[id]/complete/route";
 import { POST as publishAssessment } from "@/app/api/assessments/[id]/publish/route";
+import { POST as reopenAssessment } from "@/app/api/assessments/[id]/reopen/route";
 import { GET as getAssessmentStats } from "@/app/api/assessments/[id]/stats/route";
 import { GET as getAssessmentWindow } from "@/app/api/assessment-windows/route";
 import { callRoute } from "../helpers/callRoute";
@@ -196,6 +197,29 @@ describe("assessments routes", () => {
       });
       expect(completed.status).toBe(200);
       expect(completed.json.data.status).toBe(AssessmentStatus.COMPLETED);
+
+      // Reopening is rejected unless the assessment is actually COMPLETED —
+      // a still-PUBLISHED assessment (e.g. the entry-window one above)
+      // must not be reopenable.
+      const deniedReopen = await callRoute(reopenAssessment, {
+        method: "POST",
+        url: `/api/assessments/${completedTooEarly.id}/reopen`,
+        token: teacherAToken,
+        params: { id: completedTooEarly.id },
+      });
+      expect(deniedReopen.status).toBe(400);
+
+      // The same teacher who completed it can undo that — no separate
+      // "admin override" tier exists, since completion itself was never
+      // teacher-exclusive to begin with.
+      const reopened = await callRoute<{ data: { status: string } }>(reopenAssessment, {
+        method: "POST",
+        url: `/api/assessments/${draft.id}/reopen`,
+        token: teacherAToken,
+        params: { id: draft.id },
+      });
+      expect(reopened.status).toBe(200);
+      expect(reopened.json.data.status).toBe(AssessmentStatus.PUBLISHED);
     });
   });
 

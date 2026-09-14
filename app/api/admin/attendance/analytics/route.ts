@@ -16,7 +16,8 @@ import { logger } from "@/lib/logger/logger";
  * - endDate: End date (ISO format) - required
  * - gradeId: Grade ID for filtering (optional)
  * - classId: Class ID for specific class (optional)
- * - includeClassBreakdown: Include per-class breakdown (true/false) - default: false
+ * - includeClassBreakdown: Include per-class breakdown (true/false) - default: false.
+ *   When gradeId is omitted, the breakdown covers every active class school-wide.
  */
 export async function GET(request: NextRequest) {
   return withAuth(async (req, user) => {
@@ -65,8 +66,9 @@ export async function GET(request: NextRequest) {
 
       let classBreakdown = null;
 
-      // Get per-class breakdown if requested and gradeId is provided
-      if (includeClassBreakdown && gradeId) {
+      // Get per-class breakdown if requested — scoped to gradeId when given,
+      // or every active class school-wide when it's omitted.
+      if (includeClassBreakdown) {
         classBreakdown =
           await adminAttendanceAnalyticsService.getPerClassAttendanceSummary(
             startDate,

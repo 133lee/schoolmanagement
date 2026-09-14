@@ -232,13 +232,13 @@ export class AdminAttendanceAnalyticsService {
    *
    * @param startDate - Start date
    * @param endDate - End date
-   * @param gradeId - Grade ID
+   * @param gradeId - Grade ID; omit to summarize every active class in the school
    * @returns Per-class attendance breakdown
    */
   async getPerClassAttendanceSummary(
     startDate: Date,
     endDate: Date,
-    gradeId: string
+    gradeId?: string
   ) {
     logger.info("Fetching per-class attendance summary", {
       startDate,
@@ -246,19 +246,20 @@ export class AdminAttendanceAnalyticsService {
       gradeId,
     });
 
-    // Get all classes for this grade
+    // Get all classes for this grade, or every active class school-wide
+    // when no gradeId is given — ordered by grade sequence so a whole-school
+    // report reads top-to-bottom in grade order, not alphabetically.
     const classes = await prisma.class.findMany({
       where: {
-        gradeId,
+        ...(gradeId ? { gradeId } : {}),
         status: "ACTIVE",
       },
       select: {
         id: true,
         name: true,
+        grade: { select: { name: true, sequence: true } },
       },
-      orderBy: {
-        name: "asc",
-      },
+      orderBy: [{ grade: { sequence: "asc" } }, { name: "asc" }],
     });
 
     // Get active academic year
@@ -347,6 +348,7 @@ export class AdminAttendanceAnalyticsService {
 
         return {
           className: classItem.name,
+          gradeName: classItem.grade.name,
           totalStudents,
           maleCount,
           femaleCount,

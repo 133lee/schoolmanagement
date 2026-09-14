@@ -61,7 +61,8 @@ export interface TeacherClassView {
   isClassTeacher: boolean;
   teachingSubject: string;
   teachingSubjectId?: string; // First subject's id — only exists for subject teachers and secondary class teachers
-  teachingSubjects?: Array<{ id: string; name: string }>; // All subjects (secondary class teachers may teach more than one in their own class)
+  teachingSubjectCode?: string; // First subject's code — mobile UI shows this instead of the full name to save space
+  teachingSubjects?: Array<{ id: string; name: string; code: string }>; // All subjects (secondary class teachers may teach more than one in their own class)
   status: string;
 }
 

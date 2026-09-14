@@ -192,7 +192,7 @@ export class TeacherClassService {
    */
   private async formatClassTeacherClass(
     assignment: any,
-    ownSubjectAssignments: Array<{ subject: { id: string; name: string } }>
+    ownSubjectAssignments: Array<{ subject: { id: string; name: string; code: string } }>
   ): Promise<TeacherClassView> {
     // For PRIMARY grades, class teacher teaches all subjects
     // For SECONDARY grades, list whichever specific subject(s) they teach
@@ -200,16 +200,18 @@ export class TeacherClassService {
 
     let teachingSubject = "All Subjects"; // Default for primary
     let teachingSubjectId: string | undefined = undefined;
-    let teachingSubjects: Array<{ id: string; name: string }> | undefined = undefined;
+    let teachingSubjectCode: string | undefined = undefined;
+    let teachingSubjects: Array<{ id: string; name: string; code: string }> | undefined = undefined;
 
     if (!isPrimary) {
-      teachingSubjects = ownSubjectAssignments.map((a) => ({ id: a.subject.id, name: a.subject.name }));
+      teachingSubjects = ownSubjectAssignments.map((a) => ({ id: a.subject.id, name: a.subject.name, code: a.subject.code }));
       // Kept for existing single-subject consumers (e.g. subject analysis) —
       // the first subject when there's more than one.
       teachingSubject = teachingSubjects.length > 0
         ? teachingSubjects.map((s) => s.name).join(", ")
         : "—";
       teachingSubjectId = teachingSubjects[0]?.id;
+      teachingSubjectCode = teachingSubjects[0]?.code;
     }
 
     // Get actual student count from enrollments (source of truth)
@@ -236,6 +238,7 @@ export class TeacherClassService {
       isClassTeacher: true,
       teachingSubject,
       teachingSubjectId, // First subject's id — kept for existing single-subject consumers
+      teachingSubjectCode, // First subject's code — kept for existing single-subject consumers
       teachingSubjects, // All subjects this class teacher personally teaches here (secondary only)
       status: assignment.class.status,
     };
@@ -269,6 +272,7 @@ export class TeacherClassService {
       isClassTeacher: false,
       teachingSubject: assignment.subject.name,
       teachingSubjectId: assignment.subject.id, // Include subjectId for subject analysis
+      teachingSubjectCode: assignment.subject.code,
       status: assignment.class.status,
     };
   }

@@ -414,10 +414,64 @@ export default function ClassStudentsPage() {
     }
   };
 
+  // Shared between the mobile card list and the desktop table so the two
+  // never drift out of sync with each other.
+  const renderRowActions = (enrollment: Enrollment) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/admin/students/${enrollment.student.id}`);
+          }}
+        >
+          View Student Profile
+        </DropdownMenuItem>
+        {enrollment.status === "ACTIVE" && (
+          <>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTransferClick(enrollment);
+              }}
+            >
+              <ArrowRightLeft className="mr-2 h-4 w-4" />
+              Transfer to Another Class
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleWithdrawClick(enrollment);
+              }}
+              className="text-destructive"
+            >
+              <UserMinus className="mr-2 h-4 w-4" />
+              Withdraw from Class
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3"><Skeleton className="h-9 w-20" /><Skeleton className="h-7 w-48" /></div>
+      <div className="space-y-6 px-4 lg:px-0">
+        <div className="flex items-start justify-between mt-2">
+          <Skeleton className="h-9 w-20" />
+          <div className="text-right space-y-1">
+            <Skeleton className="h-5 w-32 ml-auto" />
+            <Skeleton className="h-3.5 w-24 ml-auto" />
+          </div>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[0,1,2,3].map(i => <Card key={i}><CardContent className="pt-5 space-y-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-12" /></CardContent></Card>)}
         </div>
@@ -439,15 +493,14 @@ export default function ClassStudentsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 px-4 lg:px-0 pb-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.push("/admin/classes")}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Classes
-          </Button>
-        </div>
+      <div className="flex items-start justify-between mt-2">
+        <Button variant="outline" size="sm" onClick={() => router.push("/admin/classes")}>
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">Back to Classes</span>
+          <span className="sm:hidden">Back</span>
+        </Button>
         <div className="text-right">
           <h1 className="text-xl font-bold">Class Students</h1>
           <p className="text-sm text-muted-foreground">
@@ -457,7 +510,7 @@ export default function ClassStudentsPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatsCard
           label="Total Enrolled"
           value={`${stats.total} / ${stats.capacity}`}
@@ -543,7 +596,32 @@ export default function ClassStudentsPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
+              {/* ── Mobile: compact card rows — student number/enrollment
+                  date dropped to keep the row short (still on the desktop
+                  table and the student's own detail page). ─────────────── */}
+              <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+                {paginatedEnrollments.map((enrollment) => {
+                  const fullName = getStudentFullName(enrollment.student);
+                  const genderInitial = enrollment.student.gender ? enrollment.student.gender.charAt(0) : "—";
+                  return (
+                    <div
+                      key={enrollment.id}
+                      onClick={() => router.push(`/admin/students/${enrollment.student.id}`)}
+                      className="flex items-center gap-3 p-3 active:bg-muted/70 transition-colors cursor-pointer"
+                    >
+                      <p className="flex-1 min-w-0 font-medium text-sm truncate">{fullName}</p>
+                      <span className="text-xs text-muted-foreground shrink-0">{genderInitial}</span>
+                      <Badge variant={getStatusBadgeVariant(enrollment.status)} className="text-[10px] px-1.5 py-0 shrink-0">
+                        {enrollment.status}
+                      </Badge>
+                      {renderRowActions(enrollment)}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── Desktop: full table — unchanged ─────────────────────── */}
+              <div className="hidden lg:block rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -596,49 +674,7 @@ export default function ClassStudentsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/admin/students/${enrollment.student.id}`);
-                                  }}
-                                >
-                                  View Student Profile
-                                </DropdownMenuItem>
-                                {enrollment.status === "ACTIVE" && (
-                                  <>
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleTransferClick(enrollment);
-                                      }}
-                                    >
-                                      <ArrowRightLeft className="mr-2 h-4 w-4" />
-                                      Transfer to Another Class
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleWithdrawClick(enrollment);
-                                      }}
-                                      className="text-destructive"
-                                    >
-                                      <UserMinus className="mr-2 h-4 w-4" />
-                                      Withdraw from Class
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {renderRowActions(enrollment)}
                           </TableCell>
                         </TableRow>
                       );
@@ -649,8 +685,8 @@ export default function ClassStudentsPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t mt-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t mt-4">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     <span>
                       Showing {startIndex + 1}-{Math.min(endIndex, filteredEnrollments.length)} of{" "}
                       {filteredEnrollments.length}

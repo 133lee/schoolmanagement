@@ -203,7 +203,7 @@ export const ClassListPDF: React.FC<ClassListPDFProps> = ({
             >
               <Text style={styles.colNo}>{index + 1}</Text>
               <Text style={styles.colName}>
-                {student.lastName}, {student.firstName}
+                {student.lastName} {student.firstName}
                 {student.middleName ? ` ${student.middleName}` : ""}
               </Text>
               <Text style={styles.colGender}>{formatGender(student.gender)}</Text>

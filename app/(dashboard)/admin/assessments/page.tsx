@@ -63,6 +63,7 @@ import {
   Lock,
   Unlock,
   Clock,
+  RotateCcw,
 } from "lucide-react";
 import {
   Empty,
@@ -293,7 +294,7 @@ export default function AdminAssessmentsPage() {
   const [examTypeFilter, setExamTypeFilter] = useState<ExamType | "all">("all");
   const [page, setPage] = useState(1);
   const [actionTarget, setActionTarget] = useState<Assessment | null>(null);
-  const [actionType, setActionType] = useState<"publish" | "complete" | null>(null);
+  const [actionType, setActionType] = useState<"publish" | "complete" | "reopen" | null>(null);
   const [actioning, setActioning] = useState(false);
 
   // Mobile-only: which of the row-one filters is currently focused/open.
@@ -359,7 +360,13 @@ export default function AdminAssessmentsPage() {
       });
       const d = await res.json();
       if (res.ok) {
-        toast.success(actionType === "publish" ? "Assessment published." : "Assessment marked as completed.");
+        toast.success(
+          actionType === "publish"
+            ? "Assessment published."
+            : actionType === "complete"
+            ? "Assessment marked as completed."
+            : "Assessment reopened."
+        );
         loadAssessments();
       } else {
         toast.error(d.error || "Action failed.");
@@ -613,9 +620,15 @@ export default function AdminAssessmentsPage() {
                                 </>
                               )}
                               {a.status === "COMPLETED" && (
-                                <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-                                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Finalised — included in report cards
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("reopen"); }}>
+                                    <RotateCcw className="h-4 w-4 mr-2 text-amber-500" />Reopen
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
+                                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Finalised — included in report cards
+                                  </DropdownMenuItem>
+                                </>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -685,9 +698,15 @@ export default function AdminAssessmentsPage() {
                                     </>
                                   )}
                                   {a.status === "COMPLETED" && (
-                                    <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-                                      <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Finalised — included in report cards
-                                    </DropdownMenuItem>
+                                    <>
+                                      <DropdownMenuItem onClick={() => { setActionTarget(a); setActionType("reopen"); }}>
+                                        <RotateCcw className="h-4 w-4 mr-2 text-amber-500" />Reopen
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
+                                        <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Finalised — included in report cards
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -847,21 +866,23 @@ export default function AdminAssessmentsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${actionType === "complete" ? "bg-green-100" : "bg-blue-100"}`}>
-                {actionType === "complete" ? <CheckCircle2 className="h-5 w-5 text-green-600" /> : <Send className="h-5 w-5 text-blue-600" />}
+              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${actionType === "complete" ? "bg-green-100" : actionType === "reopen" ? "bg-amber-100" : "bg-blue-100"}`}>
+                {actionType === "complete" ? <CheckCircle2 className="h-5 w-5 text-green-600" /> : actionType === "reopen" ? <RotateCcw className="h-5 w-5 text-amber-600" /> : <Send className="h-5 w-5 text-blue-600" />}
               </div>
-              <AlertDialogTitle>{actionType === "publish" ? "Publish Assessment" : "Mark as Completed"}</AlertDialogTitle>
+              <AlertDialogTitle>{actionType === "publish" ? "Publish Assessment" : actionType === "complete" ? "Mark as Completed" : "Reopen Assessment"}</AlertDialogTitle>
             </div>
             <AlertDialogDescription className="text-left pt-2">
               {actionType === "publish"
                 ? `Publish "${actionTarget?.title}" to allow teachers to enter results.`
-                : `Mark "${actionTarget?.title}" as completed. This finalises all marks for report cards.`}
+                : actionType === "complete"
+                ? `Mark "${actionTarget?.title}" as completed. This finalises all marks for report cards.`
+                : `Reopen "${actionTarget?.title}" for editing. It will return to Published status and can be marked complete again once corrected.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAction} disabled={actioning} className={actionType === "complete" ? "bg-green-600 hover:bg-green-700" : ""}>
-              {actioning ? "Processing..." : actionType === "publish" ? "Publish" : "Mark Completed"}
+            <AlertDialogAction onClick={handleAction} disabled={actioning} className={actionType === "complete" ? "bg-green-600 hover:bg-green-700" : actionType === "reopen" ? "bg-amber-600 hover:bg-amber-700" : ""}>
+              {actioning ? "Processing..." : actionType === "publish" ? "Publish" : actionType === "complete" ? "Mark Completed" : "Reopen"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

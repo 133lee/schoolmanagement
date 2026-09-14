@@ -79,6 +79,11 @@ export class HODAssessmentEntriesService {
     const assessments = await prisma.assessment.findMany({
       where: {
         subjectId: { in: subjectIds },
+        // A teacher's DRAFT is private scratch work — it hasn't been published
+        // yet, so it shouldn't show up on the HOD's entry-tracking dashboard
+        // and count as something to chase. It appears here only once the
+        // teacher explicitly publishes it.
+        status: { not: "DRAFT" },
         ...(activeTermId && { termId: activeTermId }),
         ...(examType && { examType }),
       },

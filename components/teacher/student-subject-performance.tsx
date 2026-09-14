@@ -169,10 +169,10 @@ export function StudentSubjectPerformance({
         <div className="h-[80px] px-1">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ left: -8, right: 4, top: 4, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ left: 0, right: 4, top: 4, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="assessment" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
-                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} width={28} />
+                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} width={24} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="score" fill="var(--color-score)" radius={[3, 3, 0, 0]} maxBarSize={32} />
               </BarChart>

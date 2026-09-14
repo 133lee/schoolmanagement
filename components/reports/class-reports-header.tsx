@@ -18,6 +18,13 @@ interface ClassOption {
   enrolled: number;
 }
 
+// Mobile trigger label — falls back to the full subject name when no code is
+// available (e.g. a primary-grade class teacher with no single subject) so
+// the field never renders blank.
+function mobileClassLabel(c: ClassOption): string {
+  return `${c.subjectCode || c.subject} - ${c.name}`;
+}
+
 interface TermOption {
   id: string;
   name: string;
@@ -70,7 +77,14 @@ export function ClassReportsHeader({
         <div className="grid grid-cols-2 gap-2">
           <Select value={selectedClass} onValueChange={onClassChange}>
             <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Select Class" />
+              {/* Trigger shows the subject CODE (not the full name) once a
+                  class is selected — the full name here was long enough to
+                  overflow this half-width mobile trigger and overlap the
+                  term field beside it. The dropdown list below still shows
+                  full subject names, so nothing is lost when choosing. */}
+              <SelectValue placeholder="Select Class">
+                {selectedClassData ? mobileClassLabel(selectedClassData) : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {classes.map((classOption) => (

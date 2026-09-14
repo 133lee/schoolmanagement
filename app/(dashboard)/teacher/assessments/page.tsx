@@ -41,6 +41,7 @@ import {
   GraduationCap,
   Send,
   CheckCircle2,
+  RotateCcw,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -142,10 +143,12 @@ export default function TeacherAssessmentsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingPublishId, setPendingPublishId] = useState<string | null>(null);
   const [pendingCompleteId, setPendingCompleteId] = useState<string | null>(null);
+  const [pendingReopenId, setPendingReopenId] = useState<string | null>(null);
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(false);
   const [classTeacherClassIds, setClassTeacherClassIds] = useState<string[]>([]);
@@ -281,6 +284,7 @@ export default function TeacherAssessmentsPage() {
   const handleDeleteClick = (id: string) => { setPendingDeleteId(id); setDeleteDialogOpen(true); };
   const handlePublishClick = (id: string) => { setPendingPublishId(id); setPublishDialogOpen(true); };
   const handleCompleteClick = (id: string) => { setPendingCompleteId(id); setCompleteDialogOpen(true); };
+  const handleReopenClick = (id: string) => { setPendingReopenId(id); setReopenDialogOpen(true); };
 
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
@@ -322,6 +326,20 @@ export default function TeacherAssessmentsPage() {
     } finally {
       setCompleteDialogOpen(false);
       setPendingCompleteId(null);
+    }
+  };
+
+  const confirmReopen = async () => {
+    if (!pendingReopenId) return;
+    try {
+      await api.post(`/assessments/${pendingReopenId}/reopen`, {});
+      toast({ title: "Assessment Reopened", description: "The assessment is back to Published status and can be edited again." });
+      fetchAssessments();
+    } catch (error: any) {
+      toast({ title: "Failed to Reopen", description: error.message || "Could not reopen assessment.", variant: "destructive" });
+    } finally {
+      setReopenDialogOpen(false);
+      setPendingReopenId(null);
     }
   };
 
@@ -523,12 +541,21 @@ export default function TeacherAssessmentsPage() {
             </Button>
           </>
         ) : (
-          <Button
-            className="w-full"
-            onClick={() => router.push(`/teacher/assessments/${assessment.id}/enter-results`)}>
-            <ClipboardEdit className="h-4 w-4 mr-2" />
-            View Results
-          </Button>
+          <>
+            <Button
+              className="w-full"
+              onClick={() => router.push(`/teacher/assessments/${assessment.id}/enter-results`)}>
+              <ClipboardEdit className="h-4 w-4 mr-2" />
+              View Results
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleReopenClick(assessment.id)}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reopen
+            </Button>
+          </>
         )}
 
         <Button
@@ -919,6 +946,22 @@ export default function TeacherAssessmentsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmComplete}>Mark as Completed</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={reopenDialogOpen} onOpenChange={setReopenDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reopen Assessment</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will return the assessment to Published status so you can correct marks. You'll
+              need to mark it as completed again once you're done.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmReopen}>Reopen</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -109,7 +109,7 @@ export default function ClassReportsPage() {
               name: c.name,
               grade: c.gradeLevel || c.grade, // API returns gradeLevel
               subject: c.teachingSubject || c.subject || "All Subjects", // API returns teachingSubject
-              subjectCode: c.subjectCode || "", // May not exist in response
+              subjectCode: c.teachingSubjectCode || c.subjectCode || "",
               enrolled: c.totalStudents || c.enrolled || 0, // API returns totalStudents
               subjectId: c.teachingSubjectId, // API returns teachingSubjectId (optional - only for subject teachers)
               isClassTeacher: c.isClassTeacher,
@@ -229,7 +229,7 @@ export default function ClassReportsPage() {
           onValueChange={(v) =>
             setActiveTab(v as "class-reports" | "subject-analysis")
           }
-          className="w-full">
+          className="w-full mt-3 lg:mt-0">
           <TabsList className="grid w-full grid-cols-2 bg-muted/50">
             <TabsTrigger
               value="class-reports"

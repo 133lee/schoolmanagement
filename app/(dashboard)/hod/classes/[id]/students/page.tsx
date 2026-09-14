@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -124,7 +125,7 @@ export default function HodClassStudentsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 px-4 lg:px-0">
         <div className="flex items-start justify-between mt-2">
           <Skeleton className="h-9 w-20" />
           <div className="text-right space-y-1">
@@ -141,7 +142,7 @@ export default function HodClassStudentsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 lg:px-0">
       {/* Header */}
       <div className="flex items-start justify-between mt-2">
         <Button variant="outline" size="sm" onClick={() => router.back()}>
@@ -206,60 +207,92 @@ export default function HodClassStudentsPage() {
               </EmptyContent>
             </Empty>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">#</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Student No.</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Enrolled</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((e, idx) => {
+            <>
+              {/* ── Mobile: compact rows — no avatar bubble, Student No.
+                  and Enrolled dropped, Gender shown as a single M/F
+                  initial to keep the row short. ───────────────────── */}
+              <div className="lg:hidden rounded-md border divide-y overflow-hidden">
+                {filtered.map((e) => {
                   const name = `${e.student.firstName} ${e.student.lastName}`;
-                  const initials = `${e.student.firstName[0]}${e.student.lastName[0]}`;
                   const isActive = e.status === "ACTIVE";
+                  const genderInitial = e.student.gender ? e.student.gender.charAt(0) : "—";
                   return (
-                    <TableRow key={e.id} className={idx % 2 === 1 ? "bg-muted/30" : undefined}>
-                      <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-sm">{name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground tabular-nums">
-                        {e.student.studentNumber}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {e.student.gender
-                          ? e.student.gender.charAt(0) + e.student.gender.slice(1).toLowerCase()
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            isActive
-                              ? "border-green-300 text-green-700 dark:text-green-400"
-                              : "border-muted text-muted-foreground"
-                          }>
-                          {e.status.charAt(0) + e.status.slice(1).toLowerCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(e.enrollmentDate).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
+                    <div key={e.id} className="flex items-center gap-3 p-3">
+                      <p className="flex-1 min-w-0 font-medium text-sm truncate">{name}</p>
+                      <span className="text-xs text-muted-foreground shrink-0">{genderInitial}</span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] px-1.5 py-0 shrink-0",
+                          isActive
+                            ? "border-green-300 text-green-700 dark:text-green-400"
+                            : "border-muted text-muted-foreground"
+                        )}>
+                        {e.status.charAt(0) + e.status.slice(1).toLowerCase()}
+                      </Badge>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* ── Desktop: full table — unchanged ─────────────────── */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">#</TableHead>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Student No.</TableHead>
+                      <TableHead>Gender</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Enrolled</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((e, idx) => {
+                      const name = `${e.student.firstName} ${e.student.lastName}`;
+                      const initials = `${e.student.firstName[0]}${e.student.lastName[0]}`;
+                      const isActive = e.status === "ACTIVE";
+                      return (
+                        <TableRow key={e.id} className={idx % 2 === 1 ? "bg-muted/30" : undefined}>
+                          <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 shrink-0">
+                                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-sm">{name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground tabular-nums">
+                            {e.student.studentNumber}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {e.student.gender
+                              ? e.student.gender.charAt(0) + e.student.gender.slice(1).toLowerCase()
+                              : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                isActive
+                                  ? "border-green-300 text-green-700 dark:text-green-400"
+                                  : "border-muted text-muted-foreground"
+                              }>
+                              {e.status.charAt(0) + e.status.slice(1).toLowerCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(e.enrollmentDate).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

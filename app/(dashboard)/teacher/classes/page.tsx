@@ -24,6 +24,8 @@ import {
   Search,
   ChevronRight,
   ChevronLeft,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -246,13 +248,25 @@ export default function TeacherClassesPage() {
   };
 
   // ── Export ───────────────────────────────────────────────────────────────────
-  const handleExportClassList = async (classId: string, mode: "class" | "subject") => {
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [pendingExport, setPendingExport] = useState<{ classId: string; mode: "class" | "subject" } | null>(null);
+  const [exportingFormat, setExportingFormat] = useState<"csv" | "pdf" | null>(null);
+
+  const handleExportClassListClick = (classId: string, mode: "class" | "subject") => {
+    setPendingExport({ classId, mode });
+    setExportDialogOpen(true);
+  };
+
+  const handleExportClassList = async (format: "csv" | "pdf") => {
+    if (!pendingExport) return;
+    const { classId, mode } = pendingExport;
     try {
+      setExportingFormat(format);
       const token = localStorage.getItem("auth_token");
       if (!token) { toast.error("No authentication token found"); return; }
-      toast.info("Generating class list...");
+      toast.info(`Generating ${format.toUpperCase()} class list...`);
       const response = await fetch(
-        `/api/teacher/classes/export-class-list?classId=${classId}&mode=${mode}`,
+        `/api/teacher/classes/export-class-list?classId=${classId}&mode=${mode}&format=${format}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!response.ok) {
@@ -266,15 +280,19 @@ export default function TeacherClassesPage() {
       const contentDisposition = response.headers.get("Content-Disposition");
       a.download = contentDisposition
         ? contentDisposition.split("filename=")[1]?.replace(/"/g, "")
-        : `class_list_${new Date().toISOString().split("T")[0]}.csv`;
+        : `class_list_${new Date().toISOString().split("T")[0]}.${format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       toast.success("Class list exported successfully");
+      setExportDialogOpen(false);
+      setPendingExport(null);
     } catch (error: any) {
       console.error("Error exporting class list:", error);
       toast.error(error.message || "Failed to export class list");
+    } finally {
+      setExportingFormat(null);
     }
   };
 
@@ -422,7 +440,7 @@ export default function TeacherClassesPage() {
             </Button>
             <Button
               variant="outline" size="sm"
-              onClick={() => handleExportClassList(classItem.id, mode)}
+              onClick={() => handleExportClassListClick(classItem.id, mode)}
               className="h-8 w-8 p-0" title="Export class list"
             >
               <Download className="h-4 w-4" />
@@ -890,7 +908,7 @@ export default function TeacherClassesPage() {
                     variant="outline"
                     size="sm"
                     className={cn("flex-1", !isClassTeacher && "w-full")}
-                    onClick={() => handleExportClassList(selectedClass.id, isClassTeacher ? "class" : "subject")}
+                    onClick={() => handleExportClassListClick(selectedClass.id, isClassTeacher ? "class" : "subject")}
                   >
                     <Download className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                     <span className="truncate">Export</span>
@@ -1218,6 +1236,49 @@ export default function TeacherClassesPage() {
             : null
         }
       />
+
+      {/* ── Export format dialog ─────────────────────────────────────────────── */}
+      <Dialog
+        open={exportDialogOpen}
+        onOpenChange={(open) => {
+          if (exportingFormat) return; // don't let a click-away cancel mid-export
+          setExportDialogOpen(open);
+          if (!open) setPendingExport(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Export Class List</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Choose a file format to download.
+          </p>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => handleExportClassList("csv")}
+              disabled={exportingFormat !== null}
+              className="flex flex-col items-center gap-2 rounded-lg border p-4 hover:bg-muted/50 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <FileSpreadsheet className="h-7 w-7 text-green-600" />
+              <span className="text-sm font-medium">
+                {exportingFormat === "csv" ? "Generating…" : "CSV"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportClassList("pdf")}
+              disabled={exportingFormat !== null}
+              className="flex flex-col items-center gap-2 rounded-lg border p-4 hover:bg-muted/50 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <FileText className="h-7 w-7 text-red-600" />
+              <span className="text-sm font-medium">
+                {exportingFormat === "pdf" ? "Generating…" : "PDF"}
+              </span>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
