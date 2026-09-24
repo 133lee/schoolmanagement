@@ -33,6 +33,7 @@
     "seed:report:cards": "npx tsx scripts/seed-report-cards.ts",
     "seed:teacher3:secondary": "npx tsx scripts/seed-teacher3-secondary.ts",
     "check:teacher3": "npx tsx scripts/check-teacher3.ts",
+    "app:stop": "node scripts/stop-app.js",
     "clean:stale": "node scripts/remove-stale-files.js",
     "fix:report-card-decimals": "dotenv -e .env -- npx tsx scripts/fix-report-card-decimals.ts",
     "fix:attendance:dates": "dotenv -e .env -- npx tsx scripts/fix-attendance-dates.ts",
