@@ -60,3 +60,6 @@ dist/
 *.log
 .env
 .DS_Store
+
+# Passenger restart trigger (created by scripts/restart-app.js)
+/tmp/
