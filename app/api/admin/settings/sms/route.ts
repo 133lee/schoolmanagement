@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "GET /api/admin/settings/sms" });
     }
-  })(request, {} as any);
+  })(request);
 }
 
 /**
@@ -74,5 +74,5 @@ export async function PUT(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "PUT /api/admin/settings/sms" });
     }
-  })(request, {} as any);
+  })(request);
 }

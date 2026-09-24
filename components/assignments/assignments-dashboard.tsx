@@ -9,7 +9,7 @@ import {
   Search,
   PanelRight,
 } from "lucide-react";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -144,7 +144,7 @@ export function AssignmentsDashboard({
       if (curriculumItem && teacher) {
         toast({
           title: "Assignment Updated",
-          description: `${teacher.name} assigned to ${curriculumItem.subject.name} for ${formatClassLabel(curriculumItem.class.grade.name, curriculumItem.class.name)}`,
+          description: `${teacher.name} assigned to ${curriculumItem.subject.name} for ${formatCompactClassLabel(curriculumItem.class.grade.name, curriculumItem.class.name)}`,
         });
       }
     } catch (error) {
@@ -174,7 +174,7 @@ export function AssignmentsDashboard({
       toast({
         title: "Teacher Unassigned",
         description: curriculumItem?.currentAssignment
-          ? `${curriculumItem.currentAssignment.teacher.name} removed from ${curriculumItem.subject.name} for ${formatClassLabel(curriculumItem.class.grade.name, curriculumItem.class.name)}`
+          ? `${curriculumItem.currentAssignment.teacher.name} removed from ${curriculumItem.subject.name} for ${formatCompactClassLabel(curriculumItem.class.grade.name, curriculumItem.class.name)}`
           : "The assignment has been removed.",
       });
     } catch (error) {

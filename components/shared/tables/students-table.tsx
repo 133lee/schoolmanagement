@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Student, StudentStatus, Gender } from "@/types/prisma-enums";
-import { formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -57,10 +57,6 @@ interface StudentsTableProps {
   onEmergencyContact?: (student: ExtendedStudent) => void;
   onLinkGuardian?: (student: ExtendedStudent) => void;
   showActions?: boolean;
-  /** Mobile card badge only: "10 A" instead of "Grade 10 A" for classes
-   *  that aren't already self-identifying (Form 1–5 names keep their own
-   *  name, unprefixed). Desktop table is unaffected either way. */
-  compactMobileClassLabel?: boolean;
   /** Mobile card only: omit the avatar circle to keep the row tighter.
    *  Desktop table always keeps its avatar either way. */
   hideMobileAvatar?: boolean;
@@ -70,6 +66,10 @@ interface StudentsTableProps {
    *  to a couple of characters — dropping it gives the name its space
    *  back. Desktop table always keeps its class column either way. */
   hideMobileClassBadge?: boolean;
+  /** Mobile card only: omit the status badge next to the name too (desktop
+   *  table is unaffected) — for callers that want the row down to just
+   *  name + actions. */
+  hideMobileStatusBadge?: boolean;
 }
 
 const statusVariants: Record<StudentStatus, "default" | "secondary" | "destructive" | "outline"> = {
@@ -90,9 +90,9 @@ export function StudentsTable({
   onEmergencyContact,
   onLinkGuardian,
   showActions = true,
-  compactMobileClassLabel = false,
   hideMobileAvatar = false,
   hideMobileClassBadge = false,
+  hideMobileStatusBadge = false,
 }: StudentsTableProps) {
   // Helper to get student full name
   const getFullName = (student: ExtendedStudent) => {
@@ -178,9 +178,7 @@ export function StudentsTable({
         {students.map((student) => {
           const classLabel =
             student.grade && student.className
-              ? compactMobileClassLabel
-                ? formatCompactClassLabel(student.grade, student.className)
-                : formatClassLabel(student.grade, student.className)
+              ? formatCompactClassLabel(student.grade, student.className)
               : student.className || student.grade || "No class assigned";
 
           return (
@@ -204,9 +202,11 @@ export function StudentsTable({
                     {classLabel}
                   </Badge>
                 )}
-                <Badge variant={statusVariants[student.status]} className="text-[10px] px-1.5 py-0 shrink-0">
-                  {student.status}
-                </Badge>
+                {!hideMobileStatusBadge && (
+                  <Badge variant={statusVariants[student.status]} className="text-[10px] px-1.5 py-0 shrink-0">
+                    {student.status}
+                  </Badge>
+                )}
               </div>
               {showActions && renderActions(student)}
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -265,7 +265,7 @@ export function StudentsTable({
                 <TableCell>
                   <span className="text-sm font-medium">
                     {student.grade && student.className
-                      ? formatClassLabel(student.grade, student.className)
+                      ? formatCompactClassLabel(student.grade, student.className)
                       : student.className || "—"}
                   </span>
                 </TableCell>

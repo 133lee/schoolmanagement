@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
 import { AssessmentWizard } from "@/components/assessments/assessment-wizard";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * Create Assessment Page
@@ -148,9 +149,9 @@ export default function CreateAssessmentPage() {
       // filter and would silently hide it, making a successful create look
       // like it vanished.
       router.push("/teacher/assessments?tab=subject-teacher");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating assessment:", error);
-      const errorMessage = error.message || "Failed to create assessment";
+      const errorMessage = getErrorMessage(error, "Failed to create assessment");
       toast({
         title: "Failed to Create Assessment",
         description: errorMessage,

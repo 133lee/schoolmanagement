@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { AcademicYear } from "@/types/prisma-enums";
 import { academicYearRepository } from "./academicYear.repository";
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from "@/lib/errors";
+import { logger } from "@/lib/logger/logger";
 
 /**
  * Academic Year Service - Business Logic Layer
@@ -395,9 +396,10 @@ export class AcademicYearService {
     // Business rule: Warn if closing the active year
     if (academicYear.isActive) {
       // This is allowed, but will deactivate it
-      console.warn(
-        `Closing active academic year ${academicYear.year}. It will be deactivated.`
-      );
+      logger.warn("Closing active academic year — it will be deactivated", {
+        academicYearId: id,
+        year: academicYear.year,
+      });
     }
 
     // Close (also deactivates)

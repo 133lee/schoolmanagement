@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import React from "react";
 import { renderToStream } from "@react-pdf/renderer";
+import { asPdfDocument } from "@/lib/pdf/as-pdf-document";
 import { withAuth } from "@/lib/http/with-auth";
 import { handleApiError } from "@/lib/http/error-handler";
 import { ApiResponse } from "@/lib/http/api-response";
@@ -19,6 +20,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get("classId");
     const mode = searchParams.get("mode") as "class" | "subject" | null;
+    const subjectId = searchParams.get("subjectId") || undefined;
     const format = (searchParams.get("format") || "pdf") as "pdf" | "csv";
 
     if (!classId) {
@@ -31,7 +33,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       return ApiResponse.badRequest("format parameter must be 'pdf' or 'csv'");
     }
 
-    const exportData = await teacherClassService.getClassListForExport(user.userId, classId, mode);
+    const exportData = await teacherClassService.getClassListForExport(user.userId, classId, mode, subjectId);
     const { className, academicYear, subjectName, students } = exportData;
 
     const safeModeText = mode === "class" ? "ClassTeacher" : "SubjectTeacher";
@@ -67,7 +69,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     });
 
     const pdfBuffer = await pdfLimiter.run(async () => {
-      const stream = await renderToStream(pdfComponent as any);
+      const stream = await renderToStream(asPdfDocument(pdfComponent));
       const chunks: Buffer[] = [];
       for await (const chunk of stream) {
         chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk));

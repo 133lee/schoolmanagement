@@ -44,9 +44,12 @@ import { EditStudentDialog } from "@/components/students/edit-student-dialog";
 import { StudentSheet } from "@/components/students/student-sheet";
 import { ImportStudentsDialog } from "@/components/students/import-students-dialog";
 import { useStudents } from "@/hooks/useStudents";
+import { useClasses } from "@/hooks/useClasses";
+import { useGrades } from "@/hooks/useGrades";
 import { StudentStatus, Gender } from "@/types/prisma-enums";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { formatCompactClassLabel } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,9 +70,10 @@ export default function StudentsPage() {
     "all"
   );
   const [genderFilter, setGenderFilter] = useState<Gender | "all">("all");
+  const [classFilter, setClassFilter] = useState<string>("all");
   // Mobile-only: which of the row-one filters is currently focused/open.
   const [activeMobileFilter, setActiveMobileFilter] = useState<
-    "search" | "gender" | null
+    "search" | "gender" | "class" | null
   >(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
@@ -93,10 +97,16 @@ export default function StudentsPage() {
     {
       status: statusFilter !== "all" ? statusFilter : undefined,
       gender: genderFilter !== "all" ? genderFilter : undefined,
+      classId: classFilter !== "all" ? classFilter : undefined,
       search: search || undefined,
     },
     { page, pageSize }
   );
+
+  const { classes: allClasses } = useClasses({ mode: "all" });
+  const { grades } = useGrades();
+  const classLabel = (c: { name: string; gradeId: string }) =>
+    formatCompactClassLabel(grades.find((g) => g.id === c.gradeId)?.name, c.name);
 
   // Transform students data to extract grade and guardian information
   const students = rawStudents.map((student: any) => {
@@ -197,8 +207,10 @@ export default function StudentsPage() {
 
   return (
     <div className="px-4 lg:px-0 space-y-6">
-      {/* Page Header — title/description hidden on mobile, actions stay */}
-      <div className="flex items-start justify-between mt-2">
+      {/* Page Header — title/description hidden on mobile, actions stay.
+          Extra top margin on mobile since the buttons become the first
+          visible thing under the sticky top bar once the title is hidden. */}
+      <div className="flex items-start justify-between mt-5 lg:mt-2">
         <div className="hidden lg:flex flex-col space-y-2">
           <h1 className="text-xl font-bold">Students Management</h1>
           <p className="text-muted-foreground text-sm">
@@ -270,7 +282,7 @@ export default function StudentsPage() {
             >
               <Select
                 value={genderFilter}
-                onValueChange={(value) => setGenderFilter(value as Gender | "all")}
+                onValueChange={(value) => { setGenderFilter(value as Gender | "all"); setPage(1); }}
                 onOpenChange={(open) => setActiveMobileFilter(open ? "gender" : null)}>
                 <SelectTrigger className={activeMobileFilter === "gender" ? "w-fit max-w-full" : "w-full"}>
                   <SelectValue placeholder="Gender" />
@@ -283,10 +295,10 @@ export default function StudentsPage() {
               </Select>
             </div>
           </div>
-          <div className="lg:hidden mt-2">
+          <div className="lg:hidden mt-2 flex gap-2">
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as StudentStatus | "all")}>
+              onValueChange={(value) => { setStatusFilter(value as StudentStatus | "all"); setPage(1); }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Filter by Status" />
               </SelectTrigger>
@@ -298,6 +310,19 @@ export default function StudentsPage() {
                 <SelectItem value={StudentStatus.WITHDRAWN}>Withdrawn</SelectItem>
                 <SelectItem value={StudentStatus.TRANSFERRED}>Transferred</SelectItem>
                 <SelectItem value={StudentStatus.DECEASED}>Deceased</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={classFilter} onValueChange={(v) => { setClassFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by Class" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {allClasses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {classLabel(c)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -315,9 +340,10 @@ export default function StudentsPage() {
             </div>
             <Select
               value={statusFilter}
-              onValueChange={(value) =>
-                setStatusFilter(value as StudentStatus | "all")
-              }>
+              onValueChange={(value) => {
+                setStatusFilter(value as StudentStatus | "all");
+                setPage(1);
+              }}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by Status" />
               </SelectTrigger>
@@ -341,9 +367,10 @@ export default function StudentsPage() {
             </Select>
             <Select
               value={genderFilter}
-              onValueChange={(value) =>
-                setGenderFilter(value as Gender | "all")
-              }>
+              onValueChange={(value) => {
+                setGenderFilter(value as Gender | "all");
+                setPage(1);
+              }}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by Gender" />
               </SelectTrigger>
@@ -351,6 +378,19 @@ export default function StudentsPage() {
                 <SelectItem value="all">All Genders</SelectItem>
                 <SelectItem value={Gender.MALE}>Male</SelectItem>
                 <SelectItem value={Gender.FEMALE}>Female</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={classFilter} onValueChange={(v) => { setClassFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Filter by Class" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {allClasses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {classLabel(c)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -427,6 +467,7 @@ export default function StudentsPage() {
               }}
               onDelete={handleDeleteClick}
               hideMobileClassBadge
+              hideMobileStatusBadge
             />
           )}
         </CardContent>

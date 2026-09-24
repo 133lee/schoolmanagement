@@ -51,7 +51,7 @@ function handleLegacyError(error: unknown): NextResponse | null {
  * @param context - Optional context for logging
  * @returns NextResponse with appropriate status code and error message
  */
-export function handleApiError(error: unknown, context?: Record<string, any>): NextResponse {
+export function handleApiError(error: unknown, context?: Record<string, unknown>): NextResponse {
   // Log the error
   if (error instanceof Error) {
     logger.error("API Error occurred", error, context);
@@ -195,6 +195,7 @@ function handlePrismaError(error: Prisma.PrismaClientKnownRequestError): NextRes
  * @param handler - The async route handler
  * @returns Wrapped handler with error handling
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic over any handler signature
 export function asyncHandler<T extends (...args: any[]) => Promise<NextResponse>>(
   handler: T
 ): T {

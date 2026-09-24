@@ -62,7 +62,7 @@ export function StudentClassRankings({
           <div>
             <CardTitle className="text-base">Class Rankings</CardTitle>
             <CardDescription className="text-xs">
-              Student's position across all subjects
+              Student&apos;s position across all subjects
             </CardDescription>
           </div>
           <Badge variant="secondary" className="text-xs">

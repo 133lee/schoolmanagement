@@ -1,6 +1,7 @@
 import prisma from "@/lib/db/prisma";
 import { NotFoundError, ForbiddenError } from "@/lib/http/errors";
 import { logger } from "@/lib/logger/logger";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { TeacherClassView, TeacherClassesResponse } from "./teacher-app.types";
 
 export interface ClassListExportData {
@@ -17,10 +18,6 @@ export interface ClassListExportData {
     admissionDate: Date;
     status: string;
   }>;
-}
-
-function formatClassLabel(gradeName: string, className: string): string {
-  return /^[A-Za-z]\d/i.test(className) ? className : `${gradeName} ${className}`;
 }
 
 /**
@@ -231,7 +228,7 @@ export class TeacherClassService {
 
     return {
       id: assignment.classId,
-      name: formatClassLabel(assignment.class.grade.name, assignment.class.name),
+      name: formatCompactClassLabel(assignment.class.grade.name, assignment.class.name),
       gradeLevel: assignment.class.grade.name,
       totalStudents: actualStudentCount,
       capacity: assignment.class.capacity,
@@ -265,7 +262,7 @@ export class TeacherClassService {
 
     return {
       id: assignment.classId,
-      name: formatClassLabel(assignment.class.grade.name, assignment.class.name),
+      name: formatCompactClassLabel(assignment.class.grade.name, assignment.class.name),
       gradeLevel: assignment.class.grade.name,
       totalStudents: actualStudentCount,
       capacity: assignment.class.capacity,
@@ -346,11 +343,19 @@ export class TeacherClassService {
    * Verify the teacher's access to a class (as class teacher or subject
    * teacher, depending on mode) and gather everything needed to render a
    * class-list PDF export.
+   *
+   * @param subjectId - Which subject to label the export with, when `mode`
+   *   is "subject". A teacher can teach the same class under two different
+   *   subjects (two separate SubjectTeacherAssignment rows), so this must
+   *   be passed explicitly rather than resolved with `findFirst` — without
+   *   it, the export would always resolve to whichever assignment Prisma
+   *   happened to return first, silently ignoring the other subject.
    */
   async getClassListForExport(
     userId: string,
     classId: string,
-    mode: "class" | "subject"
+    mode: "class" | "subject",
+    subjectId?: string
   ): Promise<ClassListExportData> {
     const teacherProfile = await prisma.teacherProfile.findUnique({
       where: { userId },
@@ -376,7 +381,12 @@ export class TeacherClassService {
       }
     } else {
       const subjectTeacherAssignment = await prisma.subjectTeacherAssignment.findFirst({
-        where: { teacherId: teacherProfile.id, classId, academicYearId: academicYear.id },
+        where: {
+          teacherId: teacherProfile.id,
+          classId,
+          academicYearId: academicYear.id,
+          ...(subjectId && { subjectId }),
+        },
         include: { subject: true },
       });
       if (!subjectTeacherAssignment) {
@@ -403,7 +413,7 @@ export class TeacherClassService {
     }
 
     return {
-      className: `${classData.grade.name} ${classData.name}`,
+      className: formatCompactClassLabel(classData.grade.name, classData.name),
       academicYear: String(academicYear.year),
       subjectName: subjectName || undefined,
       students: enrollments.map((e) => ({

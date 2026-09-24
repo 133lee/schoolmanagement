@@ -54,7 +54,7 @@ export function PasswordChangePrompt({ hasDefaultPassword }: PasswordChangePromp
             Remind Me Later
           </Button>
           <Button onClick={handleDismiss}>
-            Okay, I'll Change It
+            Okay, I&apos;ll Change It
           </Button>
         </DialogFooter>
       </DialogContent>

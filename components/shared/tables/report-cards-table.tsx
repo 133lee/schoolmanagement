@@ -26,6 +26,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Extended type for additional fields that might come from relations
 type ExtendedReportCard = ReportCard & {
@@ -60,6 +61,12 @@ interface ReportCardsTableProps {
   onDelete?: (reportCard: ExtendedReportCard) => void;
   onPreview?: (reportCard: ExtendedReportCard) => void;
   showActions?: boolean;
+  // Row selection — opt-in, off by default so existing callers (e.g. the
+  // teacher's own report-cards page) are unaffected.
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: (checked: boolean) => void;
 }
 
 const promotionStatusVariants: Record<PromotionStatus, "default" | "secondary" | "destructive" | "outline"> = {
@@ -85,7 +92,14 @@ export function ReportCardsTable({
   onDelete,
   onPreview,
   showActions = true,
+  selectable = false,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }: ReportCardsTableProps) {
+  const allOnPageSelected =
+    reportCards.length > 0 && reportCards.every((rc) => selectedIds?.has(rc.id));
+  const someOnPageSelected = reportCards.some((rc) => selectedIds?.has(rc.id));
   // Helper to get student full name
   const getStudentName = (reportCard: ExtendedReportCard) => {
     if (!reportCard.student) return "Unknown Student";
@@ -180,6 +194,14 @@ export function ReportCardsTable({
             onClick={() => onRowClick(reportCard)}
             className="flex items-center gap-3 p-3 active:bg-muted/70 transition-colors cursor-pointer"
           >
+            {selectable && (
+              <Checkbox
+                checked={selectedIds?.has(reportCard.id) ?? false}
+                onCheckedChange={() => onToggleSelect?.(reportCard.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0"
+              />
+            )}
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
               <FileText className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -211,6 +233,14 @@ export function ReportCardsTable({
         <Table>
           <TableHeader>
             <TableRow>
+              {selectable && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allOnPageSelected ? true : someOnPageSelected ? "indeterminate" : false}
+                    onCheckedChange={(checked) => onToggleSelectAll?.(checked === true)}
+                  />
+                </TableHead>
+              )}
               <TableHead>Student</TableHead>
               <TableHead>Class</TableHead>
               <TableHead>Term</TableHead>
@@ -228,6 +258,14 @@ export function ReportCardsTable({
                 onClick={() => onRowClick(reportCard)}
                 className="cursor-pointer hover:bg-muted/50"
               >
+                {selectable && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds?.has(reportCard.id) ?? false}
+                      onCheckedChange={() => onToggleSelect?.(reportCard.id)}
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   <div>
                     <p className="font-semibold text-sm">

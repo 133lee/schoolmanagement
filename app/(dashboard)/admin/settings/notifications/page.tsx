@@ -557,7 +557,7 @@ export default function NotificationsSettingsPage() {
                         <MessageSquare className="h-4 w-4 text-orange-600" />
                       </div>
                       <div>
-                        <CardTitle className="text-sm font-semibold">Africa's Talking</CardTitle>
+                        <CardTitle className="text-sm font-semibold">Africa&apos;s Talking</CardTitle>
                         <CardDescription className="text-xs">Cloud SMS API — pay-per-message</CardDescription>
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -384,7 +384,7 @@ export default function TeacherTimetablePage() {
                                     </div>
                                     <div className="flex gap-1 flex-wrap">
                                       <Badge variant="default" className="text-xs">
-                                        {formatClassLabel(slot.class.grade.name, slot.class.name)}
+                                        {formatCompactClassLabel(slot.class.grade.name, slot.class.name)}
                                       </Badge>
                                       {slot.roomNumber && (
                                         <Badge variant="outline" className="text-xs">
@@ -492,7 +492,7 @@ export default function TeacherTimetablePage() {
                   {/* Class + optional room */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <Badge variant="default" className="text-xs px-1.5 py-0.5">
-                      {formatClassLabel(slot.class.grade.name, slot.class.name)}
+                      {formatCompactClassLabel(slot.class.grade.name, slot.class.name)}
                     </Badge>
                     {slot.roomNumber && (
                       <span className="text-xs text-muted-foreground">

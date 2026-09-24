@@ -18,10 +18,11 @@ interface ClassOption {
   enrolled: number;
 }
 
-// Mobile trigger label — falls back to the full subject name when no code is
-// available (e.g. a primary-grade class teacher with no single subject) so
-// the field never renders blank.
-function mobileClassLabel(c: ClassOption): string {
+// Compact trigger label (used for both mobile and desktop triggers) — falls
+// back to the full subject name when no code is available (e.g. a
+// primary-grade class teacher with no single subject) so the field never
+// renders blank.
+function compactClassLabel(c: ClassOption): string {
   return `${c.subjectCode || c.subject} - ${c.name}`;
 }
 
@@ -83,7 +84,7 @@ export function ClassReportsHeader({
                   term field beside it. The dropdown list below still shows
                   full subject names, so nothing is lost when choosing. */}
               <SelectValue placeholder="Select Class">
-                {selectedClassData ? mobileClassLabel(selectedClassData) : undefined}
+                {selectedClassData ? compactClassLabel(selectedClassData) : undefined}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -126,7 +127,13 @@ export function ClassReportsHeader({
           <div className="flex items-center gap-3">
             <Select value={selectedClass} onValueChange={onClassChange}>
               <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Select Class" />
+                {/* Trigger shows the subject CODE (not the full name) once a
+                    class is selected — the full name grew wide enough to
+                    crowd the term field beside it. The dropdown list below
+                    still shows full subject names, so nothing is lost. */}
+                <SelectValue placeholder="Select Class">
+                  {selectedClassData ? compactClassLabel(selectedClassData) : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {classes.map((classOption) => (

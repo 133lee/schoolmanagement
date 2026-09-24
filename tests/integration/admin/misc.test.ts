@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { Role } from "@prisma/client";
+import { Role, GradeLevel } from "@prisma/client";
 import { GET as listWindows, POST as upsertWindow } from "@/app/api/admin/assessment-windows/route";
 import { DELETE as deleteWindow } from "@/app/api/admin/assessment-windows/[id]/route";
 import { GET as getAttendanceAnalytics } from "@/app/api/admin/attendance/analytics/route";
@@ -124,6 +124,94 @@ describe("admin misc: assessment-windows, attendance analytics, fix-grades, prof
 
       const otherDay = json.data.trend.dailyData.find((d) => d.date === "2026-01-16");
       expect(otherDay).toMatchObject({ totalPresent: 0, totalAbsent: 0 });
+    });
+
+    describe("per-class breakdown", () => {
+      type ClassRow = {
+        className: string;
+        gradeName: string;
+        totalStudents: number;
+        totalPresent: number;
+        totalAbsent: number;
+        attendanceRate: number;
+      };
+      type BreakdownResponse = { data: { classBreakdown: ClassRow[] | null } };
+
+      // Grade 9 is created BEFORE grade 8 on purpose, and its class first, so
+      // a passing ordering assertion can only come from the grade sequence
+      // and class name — not from insertion order.
+      async function seedTwoGrades() {
+        const academicYear = await createTestAcademicYear();
+        const term = await createTestTerm(academicYear.id);
+        const grade9 = await createTestGrade({ level: GradeLevel.GRADE_9, sequence: 9 });
+        const grade8 = await createTestGrade({ level: GradeLevel.GRADE_8, sequence: 8 });
+        const class9 = await createTestClass(grade9.id, { name: "A" });
+        const class8B = await createTestClass(grade8.id, { name: "B" });
+        const class8A = await createTestClass(grade8.id, { name: "A" });
+
+        const day = new Date("2026-01-15T00:00:00.000Z");
+        const mark = async (classId: string, name: string, status: "PRESENT" | "ABSENT") => {
+          const student = await createTestStudent({ firstName: name });
+          await enrollTestStudent(student.id, classId, academicYear.id);
+          await prisma.attendanceRecord.create({
+            data: { studentId: student.id, classId, termId: term.id, date: day, status },
+          });
+        };
+        await mark(class8A.id, "A1", "PRESENT");
+        await mark(class8A.id, "A2", "ABSENT");
+        await mark(class8B.id, "B1", "PRESENT");
+        await mark(class9.id, "N1", "PRESENT");
+        await mark(class9.id, "N2", "PRESENT");
+
+        return { grade8, grade9 };
+      }
+
+      const range = "startDate=2026-01-15T00:00:00.000Z&endDate=2026-01-15T23:59:59.000Z";
+
+      it("without a gradeId, covers every active class school-wide, ordered by grade sequence then class name, with each row's gradeName", async () => {
+        await seedTwoGrades();
+
+        const { status, json } = await callRoute<BreakdownResponse>(getAttendanceAnalytics, {
+          url: `/api/admin/attendance/analytics?${range}&includeClassBreakdown=true`,
+          token: adminToken,
+        });
+        expect(status).toBe(200);
+
+        const rows = json.data.classBreakdown!;
+        expect(rows.map((r) => `${r.gradeName} ${r.className}`)).toEqual([
+          "Grade 8 A",
+          "Grade 8 B",
+          "Grade 9 A",
+        ]);
+        expect(rows[0]).toMatchObject({ totalStudents: 2, totalPresent: 1, totalAbsent: 1, attendanceRate: 50 });
+        expect(rows[1]).toMatchObject({ totalStudents: 1, totalPresent: 1, totalAbsent: 0, attendanceRate: 100 });
+        expect(rows[2]).toMatchObject({ totalStudents: 2, totalPresent: 2, totalAbsent: 0, attendanceRate: 100 });
+      });
+
+      it("with a gradeId, still returns only that grade's classes", async () => {
+        const { grade8 } = await seedTwoGrades();
+
+        const { status, json } = await callRoute<BreakdownResponse>(getAttendanceAnalytics, {
+          url: `/api/admin/attendance/analytics?${range}&includeClassBreakdown=true&gradeId=${grade8.id}`,
+          token: adminToken,
+        });
+        expect(status).toBe(200);
+        expect(json.data.classBreakdown!.map((r) => `${r.gradeName} ${r.className}`)).toEqual([
+          "Grade 8 A",
+          "Grade 8 B",
+        ]);
+      });
+
+      it("returns no breakdown unless includeClassBreakdown is requested", async () => {
+        await seedTwoGrades();
+
+        const { status, json } = await callRoute<BreakdownResponse>(getAttendanceAnalytics, {
+          url: `/api/admin/attendance/analytics?${range}`,
+          token: adminToken,
+        });
+        expect(status).toBe(200);
+        expect(json.data.classBreakdown).toBeNull();
+      });
     });
   });
 

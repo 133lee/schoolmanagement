@@ -125,7 +125,7 @@ async function fixAttendanceDates(issues: AttendanceRecordIssue[], dryRun: boole
       } else {
         console.log(`  ✓ Updated: ${issue.studentName} - ${issue.className}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       failed++;
       console.error(`  ✗ Failed to update: ${issue.studentName} - ${error.message}`);
     }
@@ -173,7 +173,7 @@ async function main() {
         console.log('📊 Verify the changes in the UI to ensure attendance displays correctly.\n');
       }
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('\n❌ Error running migration script:', error.message);
     console.error(error);
     process.exit(1);

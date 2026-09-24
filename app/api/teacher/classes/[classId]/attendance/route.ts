@@ -67,5 +67,5 @@ export async function GET(
         endpoint: `/api/teacher/classes/[classId]/attendance`,
       });
     }
-  })(request, {} as any);
+  })(request);
 }

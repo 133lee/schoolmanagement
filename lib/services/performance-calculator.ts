@@ -17,14 +17,12 @@ export {
   calculateBestSix,
   calculateTrend,
   absoluteStatusTrend,
-  // computeBestOfSixFromReportCard is declared locally below (enhanced version)
+  computeBestOfSixFromReportCard,
 } from "./performance-calculator-pure";
 
 import {
-  type CurriculumType,
   SubjectWithCore,
   StudentScore,
-  getCurriculumType,
   calculatePercentage,
   percentageToECZPoints,
   calculateTrend,
@@ -163,80 +161,6 @@ export async function getStudentSubjectScoresWithCore(
       points,
     };
   });
-}
-
-/**
- * Extract numeric ECZ point value from an ECZGrade string.
- * GRADE_1 → 1 (best), GRADE_9 → 9 (worst). Returns 9 for null/invalid.
- */
-function eczGradeToPoint(grade: string | null | undefined): number {
-  if (!grade) return 9;
-  const n = parseInt(grade.replace('GRADE_', ''), 10);
-  return isNaN(n) ? 9 : n;
-}
-
-/**
- * Compute Best of Six display string directly from ReportCard subjects.
- *
- * This is used by the report card preview and PDF generation paths where
- * subjects already have a computed totalMark (weighted %) and ECZ grade.
- *
- * @param subjects - subjects with totalMark (%), ECZGrade string, and isCore flag
- * @param gradeLevel - Prisma GradeLevel string (e.g. "GRADE_10", "FORM_1")
- * @param gradeName  - Grade display name (e.g. "Form 1") — used to detect Form classes
- * @param className  - Class name (e.g. "F1 A") — used to detect Form classes
- * @returns formatted string, e.g. "14" (NEW_SYSTEM points), "8" (STANDARD), "434" (OLD_SYSTEM)
- */
-export function computeBestOfSixFromReportCard(
-  subjects: Array<{
-    totalMark: number | null;
-    grade: string | null;
-    isCore: boolean;
-  }>,
-  gradeLevel: string,
-  gradeName?: string | null,
-  className?: string | null,
-): string {
-  if (subjects.length === 0) return '';
-
-  const curriculumType = getCurriculumType(gradeLevel);
-
-  // For Form-named classes the underlying gradeLevel may be GRADE_8/9 (STANDARD) but
-  // the ECZ Best Six should use the 9-point SENIOR scale — match resolveECZLevel logic.
-  const isFormClass =
-    (gradeName != null && /\bForm\s*[1-9]\b|^F[1-9][\s\-]/i.test(gradeName.trim())) ||
-    (className != null && /\bForm\s*[1-9]\b|^F[1-9][\s\-]/i.test(className.trim()));
-  const effectiveType: CurriculumType = isFormClass ? 'NEW_SYSTEM' : curriculumType;
-
-  if (effectiveType === 'OLD_SYSTEM') {
-    const sorted = [...subjects]
-      .map(s => s.totalMark ?? 0)
-      .sort((a, b) => b - a)
-      .slice(0, 6);
-    return Math.round(sorted.reduce((sum, p) => sum + p, 0)).toString();
-  }
-
-  if (effectiveType === 'STANDARD') {
-    // JUNIOR 5-point scale: GRADE_1–4 pass, GRADE_9 = fail (excluded)
-    const passing = subjects
-      .map(s => eczGradeToPoint(s.grade))
-      .filter(p => p <= 4)
-      .sort((a, b) => a - b)
-      .slice(0, 6);
-    if (passing.length === 0) return '';
-    return passing.reduce((sum, p) => sum + p, 0).toString();
-  }
-
-  // NEW_SYSTEM: core subjects must all be included; fill remaining slots with
-  // the best (lowest-point) electives.
-  const cores = subjects.filter(s => s.isCore);
-  const electives = subjects
-    .filter(s => !s.isCore)
-    .sort((a, b) => eczGradeToPoint(a.grade) - eczGradeToPoint(b.grade));
-  const slotsForElectives = Math.max(0, 6 - cores.length);
-  const bestSix = [...cores, ...electives.slice(0, slotsForElectives)];
-  if (bestSix.length === 0) return '';
-  return bestSix.reduce((sum, s) => sum + eczGradeToPoint(s.grade), 0).toString();
 }
 
 /**

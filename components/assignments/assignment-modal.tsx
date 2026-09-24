@@ -114,7 +114,7 @@ export function AssignmentModal({
               <SelectContent>
                 {classes.map((cls) => (
                   <SelectItem key={cls.id} value={cls.id}>
-                    {formatCompactClassLabel(cls.grade, cls.name)} (Section {cls.section})
+                    {formatCompactClassLabel(cls.grade, cls.name)}
                   </SelectItem>
                 ))}
               </SelectContent>

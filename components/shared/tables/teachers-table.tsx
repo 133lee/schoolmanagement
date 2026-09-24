@@ -46,6 +46,9 @@ interface TeachersTableProps {
   showActions?: boolean;
   /** Hide the staff-number badge on the mobile card row (desktop table is unaffected). */
   hideStaffNumberOnMobile?: boolean;
+  /** Hide the status badge on the mobile card row too (desktop table is
+   *  unaffected) — for callers that want the row down to just name + actions. */
+  hideStatusBadgeOnMobile?: boolean;
 }
 
 const getStatusVariant = (status: StaffStatus) => {
@@ -73,6 +76,7 @@ export function TeachersTable({
   onResetPassword,
   showActions = true,
   hideStaffNumberOnMobile = false,
+  hideStatusBadgeOnMobile = false,
 }: TeachersTableProps) {
   const renderActions = (teacher: TeacherWithRelations) => (
     <DropdownMenu>
@@ -157,9 +161,11 @@ export function TeachersTable({
                     {teacher.staffNumber}
                   </Badge>
                 )}
-                <Badge variant={getStatusVariant(teacher.status)} className="text-[10px] px-1.5 py-0 shrink-0">
-                  {teacher.status}
-                </Badge>
+                {!hideStatusBadgeOnMobile && (
+                  <Badge variant={getStatusVariant(teacher.status)} className="text-[10px] px-1.5 py-0 shrink-0">
+                    {teacher.status}
+                  </Badge>
+                )}
               </div>
               {showActions && renderActions(teacher)}
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />

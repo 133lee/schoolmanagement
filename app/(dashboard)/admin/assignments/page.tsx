@@ -35,7 +35,7 @@ interface Assignment {
   };
   class: {
     id: string;
-    section: string;
+    name: string;
     grade: {
       id: string;
       name: string;
@@ -68,7 +68,7 @@ interface Subject {
 
 interface ClassItem {
   id: string;
-  section: string;
+  name: string;
   grade: {
     id: string;
     name: string;
@@ -297,7 +297,7 @@ export default function AllAssignmentsPage() {
                   <SelectItem value="">All classes</SelectItem>
                   {classes.map((classItem) => (
                     <SelectItem key={classItem.id} value={classItem.id}>
-                      {formatCompactClassLabel(classItem.grade.name, classItem.section)}
+                      {formatCompactClassLabel(classItem.grade.name, classItem.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -355,8 +355,7 @@ export default function AllAssignmentsPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Class</p>
                         <p className="font-medium">
-                          {assignment.class.grade.name}{" "}
-                          {assignment.class.section}
+                          {formatCompactClassLabel(assignment.class.grade.name, assignment.class.name)}
                         </p>
                       </div>
                       <div>

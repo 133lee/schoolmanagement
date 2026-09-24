@@ -55,8 +55,8 @@ export function JuniorSecondaryReportCard({
       {/* Header */}
       <div className="text-center mb-6">
         <h1 className="text-lg font-bold mb-1">MINISTRY OF EDUCATION</h1>
-        <h2 className="text-base font-bold">{schoolName.toUpperCase()}</h2>
-        <h3 className="text-sm font-semibold mt-1">JUNIOR SECONDARY REPORT CARD</h3>
+        <h2 className="text-base font-bold mb-1">{schoolName.toUpperCase()}</h2>
+        <h3 className="text-sm font-semibold">JUNIOR SECONDARY REPORT CARD</h3>
       </div>
 
       {/* Student Info */}

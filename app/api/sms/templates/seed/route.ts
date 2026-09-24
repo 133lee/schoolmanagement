@@ -16,5 +16,5 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "POST /api/sms/templates/seed" });
     }
-  })(request, {} as any);
+  })(request);
 }

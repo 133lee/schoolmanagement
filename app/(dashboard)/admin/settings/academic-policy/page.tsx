@@ -27,6 +27,7 @@ import {
   Info,
 } from "lucide-react";
 import { type AcademicPolicy, ACADEMIC_POLICY_DEFAULTS } from "@/lib/settings/academic-policy";
+import { getErrorMessage } from "@/lib/utils";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -121,8 +122,8 @@ export default function AcademicPolicyPage() {
         throw new Error(err.error || "Failed to save");
       }
       toast.success("Academic policy saved");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -239,8 +240,8 @@ export default function AcademicPolicyPage() {
               </SelectContent>
             </Select>
             <FieldHint>
-              "EOT only" uses the final term exam marks exclusively.
-              "Cumulative average" averages all terms (CAT, MID, EOT) across the year.
+              &quot;EOT only&quot; uses the final term exam marks exclusively.
+              &quot;Cumulative average&quot; averages all terms (CAT, MID, EOT) across the year.
             </FieldHint>
           </div>
         </CardContent>

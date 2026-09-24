@@ -5,6 +5,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "@/lib/errors";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * Settings Service - Business Logic Layer
@@ -257,8 +258,8 @@ export class SettingsService {
 
     try {
       return await systemSettingsRepository.delete(key);
-    } catch (error: any) {
-      if (error.message.includes("not found")) {
+    } catch (error) {
+      if (getErrorMessage(error).includes("not found")) {
         throw new NotFoundError(`Setting with key '${key}' not found`);
       }
       throw error;

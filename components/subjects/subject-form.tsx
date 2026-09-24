@@ -178,7 +178,7 @@ export function SubjectForm({
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Subject Information</h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter the subject's basic details
+                  Enter the subject&apos;s basic details
                 </p>
               </div>
 

@@ -188,7 +188,7 @@ export function StudentForm({
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Personal Information</h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter the student's basic personal details
+                  Enter the student&apos;s basic personal details
                 </p>
               </div>
 
@@ -513,7 +513,7 @@ export function StudentForm({
                         />
                       </FormControl>
                       <FormDescription>
-                        Student's residential address (max 500 characters)
+                        Student&apos;s residential address (max 500 characters)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

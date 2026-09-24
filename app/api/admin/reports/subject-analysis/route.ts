@@ -4,6 +4,7 @@ import { ApiResponse } from "@/lib/http/api-response";
 import { handleApiError } from "@/lib/http/error-handler";
 import { adminSubjectAnalysisService } from "@/features/admin/admin-subject-analysis.service";
 import { logger } from "@/lib/logger/logger";
+import { Role } from "@/types/prisma-enums";
 
 /**
  * GET /api/admin/reports/subject-analysis
@@ -18,8 +19,7 @@ import { logger } from "@/lib/logger/logger";
  * - assessmentType: Assessment type (CAT, MID, EOT) - default: "CAT"
  * - includeStreams: Include stream-by-stream breakdown (true/false) - default: false
  */
-export async function GET(request: NextRequest) {
-  return withAuth(async (req, user) => {
+export const GET = withAuth(async (request: NextRequest, user) => {
     try {
       // Get query parameters
       const searchParams = request.nextUrl.searchParams;
@@ -42,10 +42,7 @@ export async function GET(request: NextRequest) {
         includeStreams,
       });
 
-      // Check if user has admin permissions
-      if (!["ADMIN", "HEAD_TEACHER", "DEPUTY_HEAD"].includes(user.role)) {
-        return ApiResponse.error("Unauthorized. Admin access required.", 403);
-      }
+      const context = { userId: user.userId, role: user.role as Role };
 
       let analysisData;
 
@@ -56,6 +53,7 @@ export async function GET(request: NextRequest) {
             subjectId,
             termId,
             assessmentType,
+            context,
             convention ?? undefined
           );
       } else {
@@ -65,6 +63,7 @@ export async function GET(request: NextRequest) {
             subjectId,
             termId,
             assessmentType,
+            context,
             convention ?? undefined
           );
       }
@@ -76,5 +75,4 @@ export async function GET(request: NextRequest) {
         endpoint: "/api/admin/reports/subject-analysis",
       });
     }
-  })(request, {} as any);
-}
+});

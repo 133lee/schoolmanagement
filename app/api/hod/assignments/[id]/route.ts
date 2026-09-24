@@ -5,6 +5,7 @@ import { ApiResponse } from "@/lib/http/api-response";
 import { handleApiError } from "@/lib/http/error-handler";
 import { subjectTeacherAssignmentService } from "@/features/subject-teacher-assignments/subjectTeacherAssignment.service";
 import { logger } from "@/lib/logger/logger";
+import { Role } from "@/types/prisma-enums";
 
 /**
  * GET /api/hod/assignments/[id]
@@ -27,7 +28,7 @@ export const GET = withHODAccess(
       // Fetch assignment with relations
       const assignment = await subjectTeacherAssignmentService.getAssignmentWithRelations(
         id,
-        { userId: user.userId, role: user.role as any }
+        { userId: user.userId, role: user.role as Role }
       );
 
       // Validate assignment belongs to HOD's department
@@ -95,7 +96,7 @@ export const PATCH = withHODAccess(
         await subjectTeacherAssignmentService.updateAssignmentForHOD(
           id,
           { teacherId },
-          { userId: user.userId, role: user.role as any, departmentId: hodDept.id }
+          { userId: user.userId, role: user.role as Role, departmentId: hodDept.id }
         );
 
       return ApiResponse.success(updatedAssignment);
@@ -132,7 +133,7 @@ export const DELETE = withHODAccess(
       // Delete assignment with department scoping
       await subjectTeacherAssignmentService.deleteAssignmentForHOD(id, {
         userId: user.userId,
-        role: user.role as any,
+        role: user.role as Role,
         departmentId: hodDept.id,
       });
 

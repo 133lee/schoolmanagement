@@ -457,11 +457,17 @@ export default function MarkSchedulePage() {
         const rawArr = Array.isArray(rawData)
           ? rawData
           : rawData?.allClasses ?? rawData?.classes ?? [];
-        const cls: ClassOption[] = rawArr.filter((c: any) => c?.id).map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          gradeLevel: c.gradeLevel ?? "",
-        }));
+        // A teacher who teaches the same class under two subjects gets two
+        // entries here sharing the same classId — subject is picked via its
+        // own dropdown below, so dedupe by classId here to avoid showing
+        // the same class name twice in the Class dropdown.
+        const seenClassIds = new Set<string>();
+        const cls: ClassOption[] = [];
+        for (const c of rawArr) {
+          if (!c?.id || seenClassIds.has(c.id)) continue;
+          seenClassIds.add(c.id);
+          cls.push({ id: c.id, name: c.name, gradeLevel: c.gradeLevel ?? "" });
+        }
         setClasses(cls);
 
         const rawTerms = allTermsRes?.data ?? allTermsRes ?? [];

@@ -109,7 +109,7 @@ describe("assessments routes", () => {
     expect(status).toBe(400);
   });
 
-  it("DELETE: a TEACHER can only delete their own DRAFT assessments, not a published one", async () => {
+  it("DELETE: a TEACHER can delete their own DRAFT and PUBLISHED assessments (results cascade), but not a COMPLETED one", async () => {
     const draft = await createTestAssessment(subjectId, classId, termId, { status: AssessmentStatus.DRAFT });
 
     const deleted = await callRoute(deleteAssessment, {
@@ -120,16 +120,33 @@ describe("assessments routes", () => {
     });
     expect(deleted.status).toBe(200);
 
+    // Teachers create duplicate assessments and re-enter the same results —
+    // they must be able to remove a published one, entered results included.
     const published = await createTestAssessment(subjectId, classId, termId, {
       status: AssessmentStatus.PUBLISHED,
     });
-    const deniedPublished = await callRoute(deleteAssessment, {
+    const student = await createTestStudent();
+    await createTestAssessmentResult(student.id, published.id, 70);
+    const deletedPublished = await callRoute(deleteAssessment, {
       method: "DELETE",
       url: `/api/assessments/${published.id}`,
       token: teacherAToken,
       params: { id: published.id },
     });
-    expect(deniedPublished.status).toBe(403);
+    expect(deletedPublished.status).toBe(200);
+    expect(await prisma.studentAssessmentResult.count({ where: { assessmentId: published.id } })).toBe(0);
+
+    // COMPLETED is still admin/head-teacher-gated.
+    const completed = await createTestAssessment(subjectId, classId, termId, {
+      status: AssessmentStatus.COMPLETED,
+    });
+    const deniedCompleted = await callRoute(deleteAssessment, {
+      method: "DELETE",
+      url: `/api/assessments/${completed.id}`,
+      token: teacherAToken,
+      params: { id: completed.id },
+    });
+    expect(deniedCompleted.status).toBe(403);
   });
 
   it("ADMIN can delete any draft assessment", async () => {

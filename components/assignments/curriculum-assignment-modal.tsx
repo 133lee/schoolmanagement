@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { AlertTriangle, CheckCircle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -373,7 +373,7 @@ export function CurriculumAssignmentModal({
                   <strong>{selectedCurriculum.currentAssignment.teacher.name}</strong>{" "}
                   from teaching {selectedCurriculum.subject.name}
                   {selectedCurriculum &&
-                    ` for ${formatClassLabel(selectedCurriculum.class.grade.name, selectedCurriculum.class.name)}`}
+                    ` for ${formatCompactClassLabel(selectedCurriculum.class.grade.name, selectedCurriculum.class.name)}`}
                   ? This can be undone by assigning a teacher again.
                 </>
               )}

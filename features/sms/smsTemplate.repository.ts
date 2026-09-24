@@ -1,4 +1,5 @@
 import prisma from "@/lib/db/prisma";
+import { logger } from "@/lib/logger/logger";
 import { Prisma } from "@prisma/client";
 import type { SMSTemplate } from "@prisma/client";
 
@@ -229,7 +230,7 @@ Please ensure timely payment.
         await this.create(template);
       } catch (error) {
         // Skip if template already exists
-        console.log(`Template ${template.name} already exists, skipping...`);
+        logger.info("SMS template already exists, skipping", { templateName: template.name });
       }
     }
   }

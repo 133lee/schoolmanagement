@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -346,11 +346,11 @@ export default function ClassStudentsPage() {
       setSelectedEnrollment(null);
       setSelectedClassId("");
       setTransferReason("");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error transferring student:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to transfer student",
+        description: getErrorMessage(error, "Failed to transfer student"),
         variant: "destructive",
       });
     } finally {
@@ -364,8 +364,8 @@ export default function ClassStudentsPage() {
     try {
       setIsWithdrawing(true);
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`/api/enrollments/${selectedEnrollment.id}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/enrollments/${selectedEnrollment.id}/withdraw`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -385,11 +385,11 @@ export default function ClassStudentsPage() {
       await fetchStudents();
       setWithdrawDialogOpen(false);
       setSelectedEnrollment(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error withdrawing student:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to withdraw student",
+        description: getErrorMessage(error, "Failed to withdraw student"),
         variant: "destructive",
       });
     } finally {
@@ -504,7 +504,7 @@ export default function ClassStudentsPage() {
         <div className="text-right">
           <h1 className="text-xl font-bold">Class Students</h1>
           <p className="text-sm text-muted-foreground">
-            {classData ? formatClassLabel(classData.grade.name, classData.name) : "Manage student enrollment"}
+            {classData ? formatCompactClassLabel(classData.grade.name, classData.name) : "Manage student enrollment"}
           </p>
         </div>
       </div>
@@ -842,8 +842,8 @@ export default function ClassStudentsPage() {
               Are you sure you want to withdraw{" "}
               <span className="font-semibold">
                 {selectedEnrollment ? getStudentFullName(selectedEnrollment.student) : "this student"}
-              </span>{" "}
-              from this class? This action cannot be undone.
+              </span>
+              ? This marks them as withdrawn for the school, not just this class.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

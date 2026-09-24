@@ -191,6 +191,11 @@ export class EnrollmentRepository {
     classId: string,
     academicYearId: string
   ): Promise<StudentClassEnrollment[]> {
+    // Deliberately not filtered by status: the one caller (the admin class
+    // roster page) shows every enrollment for the year — active, withdrawn,
+    // and transferred alike — with its own status badges/filter dropdown,
+    // since withdraw/transfer now mark status instead of deleting the row
+    // (see withdrawStudentFromClass) and losing that history isn't wanted.
     return prisma.studentClassEnrollment.findMany({
       where: {
         classId,

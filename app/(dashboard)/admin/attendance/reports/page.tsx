@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { formatCompactClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -103,11 +103,11 @@ export default function AttendanceReportsPage() {
         title: "Success",
         description: "Report generated successfully",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error generating report:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to generate report",
+        description: getErrorMessage(error, "Failed to generate report"),
         variant: "destructive",
       });
     } finally {

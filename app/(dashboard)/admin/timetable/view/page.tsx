@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { formatClassLabel, formatTeacherLabel, cn } from "@/lib/utils";
+import { formatCompactClassLabel, formatTeacherLabel, cn, getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -191,7 +191,7 @@ export default function TimetableEditorPage() {
           if (!seen.has(s.class.id)) {
             seen.set(s.class.id, {
               id: s.class.id,
-              label: formatClassLabel(s.class.grade.name, s.class.name),
+              label: formatCompactClassLabel(s.class.grade.name, s.class.name),
             });
           }
         }
@@ -216,8 +216,8 @@ export default function TimetableEditorPage() {
         setFilterEntries(entries);
         if (entries.length > 0 && !selectedId) setSelectedId(entries[0].id);
       }
-    } catch (e: any) {
-      toast.error(e.message || "Failed to load timetable");
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to load timetable"));
     } finally {
       setLoading(false);
     }
@@ -369,8 +369,8 @@ export default function TimetableEditorPage() {
       }
 
       toast.success(targetSlot ? "Slots swapped" : "Slot moved");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save change");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to save change"));
       setAllSlots(snapshot);
       setHistory(h => h.slice(0, -1));
     } finally {
@@ -407,8 +407,8 @@ export default function TimetableEditorPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success("PDF exported");
-    } catch (e: any) {
-      toast.error(e.message || "Export failed");
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Export failed"));
     } finally {
       setExporting(false);
     }
@@ -899,7 +899,7 @@ function SlotCard({
           )}
           {showClass && (
             <p className="truncate opacity-75 leading-tight">
-              {formatClassLabel(slot.class.grade.name, slot.class.name)}
+              {formatCompactClassLabel(slot.class.grade.name, slot.class.name)}
             </p>
           )}
           {hasConflict && (

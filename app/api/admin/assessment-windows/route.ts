@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "GET /api/admin/assessment-windows" });
     }
-  })(request, {} as any);
+  })(request);
 }
 
 /** POST /api/admin/assessment-windows — upsert (create or replace) a window */
@@ -52,5 +52,5 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "POST /api/admin/assessment-windows" });
     }
-  })(request, {} as any);
+  })(request);
 }

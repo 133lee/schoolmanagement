@@ -22,7 +22,12 @@ export const GET = withHODAccess(async (request: NextRequest, user) => {
     const mode = searchParams.get("mode"); // 👈 "all" or null
 
     // Parse filters
-    const filters: any = {};
+    const filters: {
+      status?: StaffStatus;
+      gender?: Gender;
+      qualification?: QualificationLevel;
+      search?: string;
+    } = {};
     if (searchParams.get("status")) {
       filters.status = searchParams.get("status") as StaffStatus;
     }
@@ -32,8 +37,9 @@ export const GET = withHODAccess(async (request: NextRequest, user) => {
     if (searchParams.get("qualification")) {
       filters.qualification = searchParams.get("qualification") as QualificationLevel;
     }
-    if (searchParams.get("search")) {
-      filters.search = searchParams.get("search");
+    const search = searchParams.get("search");
+    if (search) {
+      filters.search = search;
     }
 
     /* ================= NON-PAGINATED MODE ================= */

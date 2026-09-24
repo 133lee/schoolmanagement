@@ -5,6 +5,7 @@ import { ApiResponse } from "@/lib/http/api-response";
 import { handleApiError } from "@/lib/http/error-handler";
 import { subjectTeacherAssignmentService } from "@/features/subject-teacher-assignments/subjectTeacherAssignment.service";
 import { logger } from "@/lib/logger/logger";
+import { Role } from "@/types/prisma-enums";
 
 /**
  * GET /api/hod/assignments
@@ -42,7 +43,7 @@ export const GET = withHODAccess(async (request: NextRequest, user) => {
     const result = await subjectTeacherAssignmentService.listAssignmentsForHOD(
       filters,
       pagination,
-      { userId: user.userId, role: user.role as any, departmentId: hodDept.id }
+      { userId: user.userId, role: user.role as Role, departmentId: hodDept.id }
     );
 
     return ApiResponse.success(result);
@@ -86,7 +87,7 @@ export const POST = withHODAccess(async (request: NextRequest, user) => {
     // classSubjectId is optional - if provided, it links directly to the curriculum item
     const assignment = await subjectTeacherAssignmentService.createAssignmentForHOD(
       { teacherId, subjectId, classId, academicYearId, classSubjectId },
-      { userId: user.userId, role: user.role as any, departmentId: hodDept.id }
+      { userId: user.userId, role: user.role as Role, departmentId: hodDept.id }
     );
 
     return ApiResponse.created(assignment);

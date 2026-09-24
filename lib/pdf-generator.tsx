@@ -1,6 +1,9 @@
 import { pdf } from "@react-pdf/renderer";
 import { saveAs } from "file-saver";
 import { computeBestOfSixFromReportCard } from "@/lib/services/performance-calculator-pure";
+import { resolveReportCardLevel } from "@/lib/grading/ecz-grading-system";
+import { formatTeacherLabel, formatCompactClassLabel } from "@/lib/utils";
+import { formatAttendanceLabel } from "@/lib/report-cards/attendance-label";
 import JSZip from "jszip";
 import {
   SeniorReportCard,
@@ -56,42 +59,34 @@ function mapReportCardData(
     : "";
 
   const className = reportCard.class?.name || "";
+  // Grade-prefixed for display ("12 A") — a bare "A" is unidentifiable once
+  // printed as a hard copy. Form classes (e.g. "F1-B") already carry their
+  // own identifying prefix and are returned as-is.
+  const displayClassName = formatCompactClassLabel(reportCard.class?.grade?.name, className);
 
-  // Handle both data structures: classTeacher.user.firstName or classTeacher.firstName
-  let classTeacher = "";
-  if (reportCard.classTeacher) {
-    if (reportCard.classTeacher.user) {
-      classTeacher = `${reportCard.classTeacher.user.firstName || ""} ${
-        reportCard.classTeacher.user.lastName || ""
-      }`.trim();
-    } else if (reportCard.classTeacher.firstName) {
-      classTeacher = `${reportCard.classTeacher.firstName} ${
-        reportCard.classTeacher.lastName || ""
-      }`.trim();
-    }
-  }
+  // Handle both data structures: classTeacher.user.{firstName,lastName} or
+  // classTeacher.{firstName,lastName} directly — formatted "Surname F."
+  const classTeacher = formatTeacherLabel(
+    reportCard.classTeacher?.user ?? reportCard.classTeacher
+  );
 
   const year = reportCard.term?.academicYear?.year?.toString() || "";
-  const gradeId = reportCard.class?.grade?.id || "";
   const gradeLevel = reportCard.class?.grade?.level || "";
   const gradeName = reportCard.class?.grade?.name || null;
-  const subjectsForBestSix = (reportCard.subjects || []).map((sub: any) => {
-    const gs = sub.subject?.gradeSubjects?.find((g: any) => g.gradeId === gradeId);
-    return {
-      totalMark: sub.totalMark ?? null,
-      grade: sub.grade ?? null,
-      isCore: gs?.isCore ?? true,
-    };
-  });
+  const subjectsForBestSix = (reportCard.subjects || []).map((sub: any) => ({
+    name: sub.subject?.name ?? "",
+    totalMark: sub.totalMark ?? null,
+    grade: sub.grade ?? null,
+  }));
   const bestOfSix = computeBestOfSixFromReportCard(subjectsForBestSix, gradeLevel, gradeName, className);
-  const attendance = reportCard.attendance?.toString() || "0";
+  const attendance = formatAttendanceLabel(reportCard);
 
   const subjects =
     reportCard.subjects?.map((subject: any) => ({
       name: subject.subject.name.toUpperCase(),
-      mid: subject.midMark?.toString() || "",
-      eot: subject.eotMark?.toString() || "",
-      cat: subject.catMark?.toString() || "",
+      mid: subject.midAbsent ? "AB" : subject.midMark?.toString() ?? "-",
+      eot: subject.eotAbsent ? "AB" : subject.eotMark?.toString() ?? "-",
+      cat: subject.catAbsent ? "AB" : subject.catMark?.toString() ?? "-",
     })) || [];
 
   const teacherComment = reportCard.classTeacherRemarks || "";
@@ -99,7 +94,7 @@ function mapReportCardData(
 
   return {
     pupilName,
-    class: className,
+    class: displayClassName,
     classTeacher,
     year,
     bestOfSix,
@@ -113,52 +108,14 @@ function mapReportCardData(
 }
 
 /**
- * Check if class name follows the Form naming convention (F1, F2, etc.)
- * Returns the form number if matched, null otherwise.
- *
- * Class naming convention: F{number} {className} or F{number}-{className}
- * Examples: F1 Blue, F1-B, F2 A, F3-Gold
+ * Get the appropriate PDF component for a class — delegates to the single
+ * shared resolveReportCardLevel so this never disagrees with the server-side
+ * PDF route or the in-app preview about which template a class gets.
  */
-function getFormNumber(className: string): number | null {
-  // Match pattern: F followed by a number at the start
-  const match = className.match(/^F(\d+)[\s-]/i);
-  if (match) {
-    return parseInt(match[1], 10);
-  }
-  return null;
-}
-
-/**
- * Get the appropriate PDF component based on grade level and class name
- *
- * Mapping:
- * - Form 1-5 (F1, F2, F3, F4, F5 classes): SeniorReportCard (9-point ECZ scale)
- * - Old Grades 8-9 (no F prefix): JuniorReportCard (5-point ECZ scale)
- * - Old Grades 10-12 (no F prefix): SeniorReportCard (9-point ECZ scale)
- * - Grades 1-7: SeniorReportCard as fallback (no dedicated template yet)
- */
-function getReportCardComponent(gradeLevel: string, className: string = "") {
-  // Check for Form naming convention first (F1, F2, F3, etc.)
-  const formNumber = getFormNumber(className);
-
-  if (formNumber !== null) {
-    // All Form classes (F1-F5) use Senior Secondary report card (9-point ECZ scale)
-    if (formNumber >= 1 && formNumber <= 5) {
-      return SeniorReportCard;
-    }
-  }
-
-  // Fallback to grade level detection (for old classes without F prefix)
-  // Junior Secondary: Grades 8-9 (5-point ECZ scale)
-  if (gradeLevel === "GRADE_8" || gradeLevel === "GRADE_9") {
-    return JuniorReportCard;
-  }
-  // Senior Secondary: Grades 10-12 (9-point ECZ scale)
-  if (gradeLevel === "GRADE_10" || gradeLevel === "GRADE_11" || gradeLevel === "GRADE_12") {
-    return SeniorReportCard;
-  }
-  // Fallback for grades 1-7 (no dedicated template yet)
-  return SeniorReportCard;
+function getReportCardComponent(gradeLevel: string, gradeName: string | null, className: string = "") {
+  return resolveReportCardLevel(gradeLevel, gradeName, className) === "JUNIOR"
+    ? JuniorReportCard
+    : SeniorReportCard;
 }
 
 /**
@@ -174,8 +131,9 @@ export async function generateReportCardBlob(
 
   const data = mapReportCardData(reportCard, schoolName, logoBase64);
   const gradeLevel = reportCard.class?.grade?.level || "";
+  const gradeName = reportCard.class?.grade?.name || null;
   const className = reportCard.class?.name || "";
-  const ReportCardComponent = getReportCardComponent(gradeLevel, className);
+  const ReportCardComponent = getReportCardComponent(gradeLevel, gradeName, className);
 
   return await pdf(<ReportCardComponent data={data} />).toBlob();
 }

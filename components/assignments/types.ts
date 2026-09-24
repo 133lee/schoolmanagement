@@ -23,7 +23,6 @@ export interface AssignmentClass {
   id: string;
   name: string;
   grade: string;
-  section: string;
 }
 
 export interface Assignment {

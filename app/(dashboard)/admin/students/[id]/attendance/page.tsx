@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -40,7 +41,7 @@ interface AttendanceRecord {
   status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
   remarks: string | null;
   class: {
-    section: string;
+    name: string;
     grade: {
       name: string;
     };
@@ -302,7 +303,7 @@ export default function StudentAttendancePage() {
                       {getStatusBadge(record.status)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Class: {record.class.grade.name} {record.class.section}
+                      Class: {formatCompactClassLabel(record.class.grade.name, record.class.name)}
                     </div>
                     {record.remarks && (
                       <p className="text-sm text-muted-foreground mt-1">

@@ -397,7 +397,6 @@ export default function HodStudentsPage() {
           ) : (
             <StudentsTable
               students={students}
-              compactMobileClassLabel
               hideMobileAvatar
               onRowClick={(student) => {
                 setSheetStudentId(student.id);

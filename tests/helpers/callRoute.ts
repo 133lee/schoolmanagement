@@ -22,6 +22,10 @@ export interface CallRouteResult<T = unknown> {
   contentType: string | null;
   /** Byte length of the raw response body — set for non-JSON responses (PDF/ZIP binaries). */
   byteLength: number | null;
+  /** Decoded body for text/* responses (e.g. CSV exports); null for JSON and binary. */
+  text: string | null;
+  /** Response headers, e.g. to assert a Content-Disposition filename. */
+  headers: Headers;
 }
 
 /**
@@ -54,6 +58,7 @@ export async function callRoute<T = unknown>(
 
   let json: T;
   let byteLength: number | null = null;
+  let text: string | null = null;
   if (contentType?.includes("application/json")) {
     try {
       json = await response.json();
@@ -65,8 +70,11 @@ export async function callRoute<T = unknown>(
     // raw byte length instead so tests can assert real content was produced.
     const buffer = await response.arrayBuffer();
     byteLength = buffer.byteLength;
+    if (contentType?.startsWith("text/")) {
+      text = new TextDecoder().decode(buffer);
+    }
     json = undefined as T;
   }
 
-  return { status: response.status, json, contentType, byteLength };
+  return { status: response.status, json, contentType, byteLength, text, headers: response.headers };
 }

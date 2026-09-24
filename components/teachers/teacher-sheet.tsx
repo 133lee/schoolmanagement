@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -44,7 +44,6 @@ interface ClassAssignment {
   class: {
     id: string;
     name: string;
-    section: string;
     grade: {
       name: string;
     };
@@ -183,11 +182,11 @@ export function TeacherSheet({
 
       // Refresh assignments
       setAssignments((prev) => prev.filter((a) => a.id !== assignmentToUnlink.id));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error unlinking assignment:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to unlink assignment",
+        description: getErrorMessage(error, "Failed to unlink assignment"),
         variant: "destructive",
       });
     } finally {
@@ -196,12 +195,12 @@ export function TeacherSheet({
     }
   };
 
-  if (!teacher) return null;
+  const fullName = teacher
+    ? `${teacher.firstName} ${teacher.middleName ? teacher.middleName + " " : ""}${teacher.lastName}`
+    : "";
+  const initials = teacher ? `${teacher.firstName[0]}${teacher.lastName[0]}` : "";
 
-  const fullName = `${teacher.firstName} ${teacher.middleName ? teacher.middleName + " " : ""}${teacher.lastName}`;
-  const initials = `${teacher.firstName[0]}${teacher.lastName[0]}`;
-
-  const subjects = teacher.subjects?.map(ts => ts.subject) || [];
+  const subjects = teacher?.subjects?.map(ts => ts.subject) || [];
 
   const getStatusVariant = (status: StaffStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -227,7 +226,7 @@ export function TeacherSheet({
       <SheetContent
         side="right"
         className="w-full sm:max-w-md p-0 overflow-hidden flex flex-col">
-        {isLoading ? (
+        {isLoading || !teacher ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
@@ -516,7 +515,7 @@ export function TeacherSheet({
                                   <Users className="h-4 w-4 text-muted-foreground mt-0.5" />
                                   <div className="flex-1">
                                     <p className="text-sm font-medium">
-                                      {formatClassLabel(assignment.class.grade.name, assignment.class.section)}
+                                      {formatCompactClassLabel(assignment.class.grade.name, assignment.class.name)}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                       {assignment.subject.name} ({assignment.subject.code})
@@ -568,13 +567,13 @@ export function TeacherSheet({
             <AlertDialogDescription className="text-left pt-3">
               Are you sure you want to unlink{" "}
               <span className="font-semibold">
-                {assignmentToUnlink ? formatClassLabel(assignmentToUnlink.class.grade.name, assignmentToUnlink.class.section) : ""}
+                {assignmentToUnlink ? formatCompactClassLabel(assignmentToUnlink.class.grade.name, assignmentToUnlink.class.name) : ""}
               </span>{" "}
               -{" "}
               <span className="font-semibold">
                 {assignmentToUnlink?.subject.name}
               </span>{" "}
-              from this teacher? This will remove the teacher's assignment to teach this subject for this class.
+              from this teacher? This will remove the teacher&apos;s assignment to teach this subject for this class.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

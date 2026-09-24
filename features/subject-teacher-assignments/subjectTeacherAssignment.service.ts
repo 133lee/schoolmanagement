@@ -7,6 +7,7 @@ import { classRepository } from "../classes/class.repository";
 import { academicYearRepository } from "../academic-years/academicYear.repository";
 import prisma from "@/lib/db/prisma";
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from "@/lib/errors";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * SubjectTeacherAssignment Service - Business Logic Layer
@@ -312,11 +313,11 @@ export class SubjectTeacherAssignmentService {
           context
         );
         results.successful++;
-      } catch (error: any) {
+      } catch (error) {
         results.failed.push({
           teacherId: assignment.teacherId,
           subjectId: assignment.subjectId,
-          error: error.message || "Unknown error",
+          error: getErrorMessage(error, "Unknown error"),
         });
       }
     }
@@ -1019,11 +1020,11 @@ export class SubjectTeacherAssignmentService {
           context
         );
         results.successful++;
-      } catch (error: any) {
+      } catch (error) {
         results.failed.push({
           teacherId: assignment.teacherId,
           subjectId: assignment.subjectId,
-          error: error.message || "Unknown error",
+          error: getErrorMessage(error, "Unknown error"),
         });
       }
     }

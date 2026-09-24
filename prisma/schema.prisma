@@ -699,6 +699,13 @@ model ReportCardSubject {
   catMark      Float?
   midMark      Float?
   eotMark      Float?
+  // A student can be absent for one exam type but present for another
+  // within the same subject, so absence is tracked per mark, not once per
+  // subject. When true, the corresponding *Mark is null (excluded from the
+  // weighted average) and the report card prints "AB" instead of "-".
+  catAbsent    Boolean    @default(false)
+  midAbsent    Boolean    @default(false)
+  eotAbsent    Boolean    @default(false)
   totalMark    Float?
   grade        ECZGrade?
   remarks      String?

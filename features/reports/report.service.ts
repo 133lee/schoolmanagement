@@ -1,6 +1,13 @@
 import { reportRepository } from "./report.repository";
 import { NotFoundError, ForbiddenError } from "@/lib/http/errors";
-import { GradeLevel } from "@/types/prisma-enums";
+import { GradeLevel, Role } from "@/types/prisma-enums";
+import { requireMinimumRole, AuthContext } from "@/lib/auth/authorization";
+import {
+  isPhysicsSubjectName,
+  isChemistrySubjectName,
+  COMBINED_SCIENCE_LABEL,
+  COMBINED_SCIENCE_SUBJECT_ID,
+} from "@/lib/grading/combined-science";
 
 const HOD_GRADE_LEVELS: GradeLevel[] = [
   GradeLevel.GRADE_8,
@@ -70,6 +77,36 @@ export class ReportService {
 
   async getAllSubjects() {
     return reportRepository.findAllSubjects();
+  }
+
+  /**
+   * Subjects offered in a grade, plus (Grade 12 only, when both are
+   * actually offered there) a synthetic "Science" entry standing in for
+   * the combined Physics+Chemistry view — see lib/grading/combined-science.ts.
+   */
+  async getSubjectsByGrade(gradeId: string, context: AuthContext) {
+    requireMinimumRole(
+      context,
+      Role.HEAD_TEACHER,
+      "Admin access required to view subjects for a grade"
+    );
+
+    const [grade, subjects] = await Promise.all([
+      reportRepository.findGradeById(gradeId),
+      reportRepository.findSubjectsByGrade(gradeId),
+    ]);
+
+    const hasPhysics = subjects.some((s) => isPhysicsSubjectName(s.name));
+    const hasChemistry = subjects.some((s) => isChemistrySubjectName(s.name));
+
+    if (grade?.level === "GRADE_12" && hasPhysics && hasChemistry) {
+      return [
+        ...subjects,
+        { id: COMBINED_SCIENCE_SUBJECT_ID, name: COMBINED_SCIENCE_LABEL, code: "SCI" },
+      ].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return subjects;
   }
 
   async getHODDepartmentSubjects(userId: string) {

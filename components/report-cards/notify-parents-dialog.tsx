@@ -264,7 +264,7 @@ export function NotifyParentsDialog({ open, onOpenChange }: NotifyParentsDialogP
             Notify Parents — Assessment Results
           </DialogTitle>
           <DialogDescription>
-            Send each student's scores for a specific exam type directly to their parent's phone.
+            Send each student&apos;s scores for a specific exam type directly to their parent&apos;s phone.
           </DialogDescription>
         </DialogHeader>
 

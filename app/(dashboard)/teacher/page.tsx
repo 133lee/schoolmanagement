@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ function PeriodRow({ slot }: { slot: TimetableSlot }) {
         </div>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
           <span className="text-xs text-muted-foreground">
-            {formatClassLabel(slot.class.grade.name, slot.class.name)}
+            {formatCompactClassLabel(slot.class.grade.name, slot.class.name)}
           </span>
           {slot.roomNumber && (
             <>

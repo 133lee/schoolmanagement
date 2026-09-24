@@ -40,6 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DesktopOnlyNotice } from "@/components/shared/desktop-only-notice";
+import { getErrorMessage } from "@/lib/utils";
 
 interface Room {
   id: string;
@@ -105,8 +106,8 @@ export default function RoomsPage() {
 
       const data = await response.json();
       setRooms(data.data);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load rooms");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to load rooms"));
     } finally {
       setLoading(false);
     }
@@ -174,8 +175,8 @@ export default function RoomsPage() {
       );
       setDialogOpen(false);
       fetchRooms();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -204,8 +205,8 @@ export default function RoomsPage() {
       setDeleteDialogOpen(false);
       setDeletingRoom(null);
       fetchRooms();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -513,7 +514,7 @@ export default function RoomsPage() {
           <DialogHeader>
             <DialogTitle>Delete Room</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deletingRoom?.name}"?
+              Are you sure you want to delete &quot;{deletingRoom?.name}&quot;?
               {deletingRoom?._count?.timetableSlots ? (
                 <span className="block mt-2 text-yellow-600">
                   Warning: This room has {deletingRoom._count.timetableSlots}{" "}

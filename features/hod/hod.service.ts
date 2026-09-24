@@ -1,5 +1,5 @@
 import prisma from "@/lib/db/prisma";
-import { StaffStatus, Gender, QualificationLevel, ClassStatus } from "@prisma/client";
+import { StaffStatus, Gender, QualificationLevel, ClassStatus, type Prisma } from "@prisma/client";
 import { getHODDepartment } from "@/lib/auth/position-helpers";
 import { ForbiddenError, NotFoundError } from "@/lib/http/errors";
 
@@ -73,7 +73,7 @@ export class HodService {
     });
 
     // Build where clause (same as getTeachers)
-    const where: any = {
+    const where: Prisma.TeacherProfileWhereInput = {
       deletedAt: null,
       OR: [
         {
@@ -156,7 +156,7 @@ export class HodService {
     // Include teachers who are either:
     // 1. Members of the department (via TeacherDepartment), OR
     // 2. The HOD themselves
-    const where: any = {
+    const where: Prisma.TeacherProfileWhereInput = {
       deletedAt: null,
       OR: [
         {
@@ -256,7 +256,7 @@ export class HodService {
   ) {
     const departmentId = await this.getHodDepartmentId(userId);
 
-    const where: any = {
+    const where: Prisma.SubjectWhereInput = {
       departmentId,
       deletedAt: null,
     };
@@ -309,7 +309,7 @@ export class HodService {
     const pageSize = pagination?.pageSize || 10;
     const skip = (page - 1) * pageSize;
 
-    const where: any = {
+    const where: Prisma.SubjectWhereInput = {
       departmentId,
       deletedAt: null,
     };
@@ -388,7 +388,7 @@ export class HodService {
     const skip = (page - 1) * pageSize;
 
     // Build where clause - filter to SECONDARY school level
-    const where: any = {
+    const where: Prisma.ClassWhereInput = {
       grade: {
         schoolLevel: "SECONDARY",
       },

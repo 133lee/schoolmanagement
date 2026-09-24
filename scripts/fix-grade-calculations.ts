@@ -79,7 +79,7 @@ async function fixGradeCalculations() {
         } else {
           unchangedCount++;
         }
-      } catch (error: any) {
+      } catch (error) {
         errors.push({
           resultId: result.id,
           error: error.message || "Unknown error",

@@ -12,6 +12,7 @@ import { ArrowLeft, Save, Upload, Building2, Trash2, Image as ImageIcon } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import Image from "next/image";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * School Information Settings Page
@@ -128,9 +129,9 @@ export default function SchoolInfoPage() {
       }
 
       toast.success("School information saved successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to save school information:", error);
-      toast.error(error.message || "Failed to save school information");
+      toast.error(getErrorMessage(error, "Failed to save school information"));
     } finally {
       setSaving(false);
     }
@@ -175,9 +176,9 @@ export default function SchoolInfoPage() {
       const data = await response.json();
       setLogoUrl(`${data.url}?t=${Date.now()}`);
       toast.success("Logo uploaded successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to upload logo:", error);
-      toast.error(error.message || "Failed to upload logo");
+      toast.error(getErrorMessage(error, "Failed to upload logo"));
     } finally {
       setUploadingLogo(false);
       // Reset file input
@@ -209,9 +210,9 @@ export default function SchoolInfoPage() {
 
       setLogoUrl(`/school-logo.png?t=${Date.now()}`);
       toast.success("Logo deleted successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to delete logo:", error);
-      toast.error(error.message || "Failed to delete logo");
+      toast.error(getErrorMessage(error, "Failed to delete logo"));
     } finally {
       setUploadingLogo(false);
     }

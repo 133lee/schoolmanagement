@@ -4,7 +4,7 @@ import { ApiResponse } from "@/lib/http/api-response";
 import { handleApiError } from "@/lib/http/error-handler";
 import { smsService } from "@/features/sms/sms.service";
 import { logger } from "@/lib/logger/logger";
-import { Role } from "@/types/prisma-enums";
+import { Role, SMSStatus, SMSProvider } from "@/types/prisma-enums";
 
 /**
  * GET /api/sms/logs
@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
       const searchParams = request.nextUrl.searchParams;
 
       const filters = {
-        status: searchParams.get("status") as any,
+        status: (searchParams.get("status") as SMSStatus | null) ?? undefined,
         guardianId: searchParams.get("guardianId") || undefined,
         studentId: searchParams.get("studentId") || undefined,
-        provider: searchParams.get("provider") as any,
+        provider: (searchParams.get("provider") as SMSProvider | null) ?? undefined,
         dateFrom: searchParams.get("dateFrom")
           ? new Date(searchParams.get("dateFrom")!)
           : undefined,
@@ -65,5 +65,5 @@ export async function GET(request: NextRequest) {
         endpoint: "/api/sms/logs",
       });
     }
-  })(request, {} as any);
+  })(request);
 }

@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * Academic Years Management Page
@@ -89,11 +90,11 @@ export default function AcademicYearsManagement() {
       });
 
       fetchAcademicYears();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error activating academic year:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -124,11 +125,11 @@ export default function AcademicYearsManagement() {
       });
 
       fetchAcademicYears();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error closing academic year:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {
@@ -242,7 +243,7 @@ export default function AcademicYearsManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>What's Next?</CardTitle>
+          <CardTitle>What&apos;s Next?</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>
@@ -271,7 +272,7 @@ export default function AcademicYearsManagement() {
               <AlertDialogTitle>Close Academic Year</AlertDialogTitle>
             </div>
             <AlertDialogDescription className="text-left pt-3">
-              Are you sure you want to close this academic year? This action will prevent further modifications to this year's data.
+              Are you sure you want to close this academic year? This action will prevent further modifications to this year&apos;s data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, BookOpen } from "lucide-react";
@@ -79,7 +79,7 @@ export default function StudentEnrollmentsPage() {
       <div>
         <h1 className="text-3xl font-bold">Enrollment History</h1>
         <p className="text-muted-foreground">
-          View student's enrollment across academic years
+          View student&apos;s enrollment across academic years
         </p>
       </div>
 
@@ -101,7 +101,7 @@ export default function StudentEnrollmentsPage() {
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
-                    {enrollment.academicYear.year} - {formatClassLabel(enrollment.class.grade.name, enrollment.class.name)}
+                    {enrollment.academicYear.year} - {formatCompactClassLabel(enrollment.class.grade.name, enrollment.class.name)}
                   </span>
                   <span
                     className={`text-xs px-2 py-1 rounded-full ${

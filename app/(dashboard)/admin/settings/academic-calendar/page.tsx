@@ -47,7 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 
 interface AcademicYear {
   id: string;
@@ -180,8 +180,8 @@ export default function AcademicCalendarPage() {
       }
       toast({ title: "Academic year closed" });
       fetchAcademicYears();
-    } catch (e: any) {
-      toast({ title: e.message || "Failed to close", variant: "destructive" });
+    } catch (e) {
+      toast({ title: getErrorMessage(e, "Failed to close"), variant: "destructive" });
     } finally {
       setCloseDialogOpen(false);
       setYearToClose(null);
@@ -641,7 +641,7 @@ export default function AcademicCalendarPage() {
               <AlertDialogTitle>Close Academic Year</AlertDialogTitle>
             </div>
             <AlertDialogDescription className="text-left pt-2">
-              This will prevent further modifications to this year's data. This action cannot be undone.
+              This will prevent further modifications to this year&apos;s data. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

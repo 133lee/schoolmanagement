@@ -27,5 +27,5 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "/api/sms/balance" });
     }
-  })(request, {} as any);
+  })(request);
 }

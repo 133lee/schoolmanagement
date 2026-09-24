@@ -43,8 +43,11 @@ next-env.d.ts
 # claude code local config (may contain API keys / local paths)
 .claude/
 
-# database dumps — never belong in public/ (publicly served) or in git
+# database dumps — never belong in public/ (publicly served) or in git.
+# Prisma migration SQL is the exception: it's the source of truth for
+# schema history and must be committed (see CLAUDE.md's migration rules).
 *.sql
+!prisma/migrations/**/*.sql
 public/dump*
 
 # prisma generated client (rebuild with prisma generate)

@@ -14,6 +14,14 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
   {
+    // Plain Node CommonJS scripts (`.js`/`.cjs`) can't use ES `import`, so
+    // `require()` is the only option there — the rule targets app code.
+    files: ["scripts/**/*.{js,cjs}"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
     // Architectural guardrail — see CLAUDE.md. Route handlers must go through
     // withAuth + a service/repository, never touch Prisma or JWTs directly.
     files: ["app/api/**/route.ts"],

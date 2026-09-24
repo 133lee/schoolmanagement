@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "GET /api/sms/templates" });
     }
-  })(request, {} as any);
+  })(request);
 }
 
 /** POST /api/sms/templates — create template (admin only) */
@@ -29,5 +29,5 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "POST /api/sms/templates" });
     }
-  })(request, {} as any);
+  })(request);
 }

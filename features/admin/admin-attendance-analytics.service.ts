@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/db/prisma";
 import { logger } from "@/lib/logger/logger";
 import { NotFoundError, BadRequestError } from "@/lib/http/errors";
@@ -53,7 +54,7 @@ export class AdminAttendanceAnalyticsService {
     });
 
     // Build where clause for class filtering
-    let classWhere: any = { status: "ACTIVE" };
+    const classWhere: Prisma.ClassWhereInput = { status: "ACTIVE" };
 
     if (classId) {
       // Specific class

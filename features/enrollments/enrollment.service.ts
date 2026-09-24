@@ -1,10 +1,11 @@
 import { Prisma } from "@prisma/client";
-import { StudentClassEnrollment, EnrollmentStatus } from "@/types/prisma-enums";
+import { StudentClassEnrollment, EnrollmentStatus, StudentStatus } from "@/types/prisma-enums";
 import { enrollmentRepository } from "./enrollment.repository";
 import { studentRepository } from "../students/student.repository";
 import { classRepository } from "../classes/class.repository";
 import { academicYearRepository } from "../academic-years/academicYear.repository";
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from "@/lib/errors";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * Enrollment Service - Business Logic Layer
@@ -169,7 +170,7 @@ export class EnrollmentService {
         );
       }
 
-      const enrollmentCount = await enrollmentRepository.countByClass(
+      const enrollmentCount = await enrollmentRepository.countActiveInClass(
         data.classId,
         data.academicYearId,
         tx
@@ -222,10 +223,10 @@ export class EnrollmentService {
           context
         );
         results.successful++;
-      } catch (error: any) {
+      } catch (error) {
         results.failed.push({
           studentId,
-          error: error.message || "Unknown error",
+          error: getErrorMessage(error, "Unknown error"),
         });
       }
     }
@@ -386,7 +387,7 @@ export class EnrollmentService {
       }
 
       // Check capacity
-      const enrollmentCount = await enrollmentRepository.countByClass(
+      const enrollmentCount = await enrollmentRepository.countActiveInClass(
         data.classId,
         existingEnrollment.academicYearId
       );
@@ -448,6 +449,54 @@ export class EnrollmentService {
 
     // Delete
     await enrollmentRepository.delete(id);
+  }
+
+  /**
+   * Withdraw a student from a class — marks the enrollment WITHDRAWN
+   * (preserving history, unlike the hard-delete `deleteEnrollment` above)
+   * and marks the student's own status WITHDRAWN in the same transaction,
+   * since "withdraw from class" means "withdrawn from school" here, not a
+   * mid-year class reassignment (that's `updateEnrollment`'s classId path).
+   */
+  async withdrawStudentFromClass(
+    id: string,
+    reason: string | undefined,
+    context: ServiceContext
+  ): Promise<StudentClassEnrollment> {
+    if (!this.canDelete(context)) {
+      throw new UnauthorizedError(
+        "You do not have permission to withdraw a student from a class"
+      );
+    }
+
+    const enrollment = await enrollmentRepository.findByIdWithRelations(id);
+    if (!enrollment) {
+      throw new NotFoundError("Enrollment not found");
+    }
+
+    if (enrollment.academicYear.isClosed) {
+      throw new ValidationError(
+        "Cannot withdraw a student from a closed academic year"
+      );
+    }
+
+    if (enrollment.status === EnrollmentStatus.WITHDRAWN) {
+      throw new ValidationError("This enrollment is already withdrawn");
+    }
+
+    return enrollmentRepository.withTransaction(async (tx) => {
+      const updated = await enrollmentRepository.updateInTransaction(tx, id, {
+        status: EnrollmentStatus.WITHDRAWN,
+        changeReason: reason,
+        changedAt: new Date(),
+      });
+
+      await studentRepository.updateInTransaction(tx, enrollment.studentId, {
+        status: StudentStatus.WITHDRAWN,
+      });
+
+      return updated;
+    });
   }
 
   /**

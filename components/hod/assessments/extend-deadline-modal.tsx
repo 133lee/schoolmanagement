@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/popover";
 import { TeacherAssessmentEntry } from "@/types/hod-assessment";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 
 interface ExtendDeadlineModalProps {
   assessment: TeacherAssessmentEntry | null;
@@ -74,10 +74,10 @@ export function ExtendDeadlineModal({
       });
       onSuccess?.();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to extend deadline. Please try again.",
+        description: getErrorMessage(error, "Failed to extend deadline. Please try again."),
         variant: "destructive",
       });
     } finally {

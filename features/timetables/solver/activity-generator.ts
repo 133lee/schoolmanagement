@@ -13,6 +13,7 @@ import {
   SolverConfig,
   DoublePeriodConfig,
 } from './types';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Generate activities from assignments and class curriculum
@@ -66,9 +67,10 @@ export function generateActivities(
     const classSubject = periodLookup.get(lookupKey);
 
     if (!classSubject) {
-      console.warn(
-        `No class subject found for ${assignment.subject.name} in class ${assignment.class.name}`
-      );
+      logger.warn("No class subject found for teaching assignment — skipping", {
+        subject: assignment.subject.name,
+        className: assignment.class.name,
+      });
       continue;
     }
 

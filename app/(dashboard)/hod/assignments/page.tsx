@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { formatClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -115,7 +115,7 @@ export default function HodAssignmentsPage() {
             action: "assigned" as const,
             teacherName: teacher.name,
             subjectName: subject.name,
-            className: formatClassLabel(cls.grade, cls.name),
+            className: formatCompactClassLabel(cls.grade, cls.name),
             timestamp: a.assignedDate!,
           },
         ];
@@ -335,7 +335,6 @@ export default function HodAssignmentsPage() {
               id: c.id,
               name: c.name,
               grade: c.grade?.name || c.gradeLevel?.name || "",
-              section: c.section || "A",
             }));
           setClasses(mappedClasses);
         }
@@ -450,7 +449,7 @@ export default function HodAssignmentsPage() {
             id: Date.now().toString(),
             action: existingAssignment ? "reassigned" : "assigned",
             teacherName: teacher.name,
-            className: formatClassLabel(cls.grade, cls.name),
+            className: formatCompactClassLabel(cls.grade, cls.name),
             subjectName: subject.name,
             timestamp: new Date().toISOString(),
           },
@@ -514,7 +513,7 @@ export default function HodAssignmentsPage() {
           id: Date.now().toString(),
           action: "unassigned",
           teacherName: teacher.name,
-          className: formatClassLabel(cls.grade, cls.name),
+          className: formatCompactClassLabel(cls.grade, cls.name),
           subjectName: subject.name,
           timestamp: new Date().toISOString(),
         },
@@ -592,7 +591,7 @@ export default function HodAssignmentsPage() {
             id: Date.now().toString(),
             action: existingAssignment ? "reassigned" : "assigned",
             teacherName: teacher.name,
-            className: formatClassLabel(curriculumItem.class.grade.name, curriculumItem.class.name),
+            className: formatCompactClassLabel(curriculumItem.class.grade.name, curriculumItem.class.name),
             subjectName: curriculumItem.subject.name,
             timestamp: new Date().toISOString(),
           },

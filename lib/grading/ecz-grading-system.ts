@@ -327,13 +327,21 @@ export function resolveECZLevel(
   gradeName?: string | null,
   className?: string | null
 ): GradeLevel {
-  const isFormNamed = (name?: string | null): boolean =>
-    !!name && /\bForm\s*[1-9]\b|^F[1-9][\s\-]/i.test(name.trim());
-
   if (isFormNamed(gradeName) || isFormNamed(className)) {
     return "SENIOR";
   }
   return mapPrismaGradeLevelToECZLevel(gradeLevel);
+}
+
+/**
+ * True for the "Form" naming convention — "Form 1".."Form 9", or the short
+ * "F1-A" / "F2 Blue" style. Checked against both the grade name and the
+ * class name by callers, since a school's Grade 8/9 records can carry
+ * Form-prefixed class names while the Grade record itself is still called
+ * "Grade 8"/"Grade 9".
+ */
+function isFormNamed(name?: string | null): boolean {
+  return !!name && /\bForm\s*[1-9]\b|^F[1-9][\s\-]/i.test(name.trim());
 }
 
 /**
@@ -370,6 +378,32 @@ export function mapPrismaGradeLevelToECZLevel(prismaLevel: PrismaGradeLevel): Gr
     default:
       return "SENIOR";
   }
+}
+
+/**
+ * Which report card DOCUMENT (title + layout) to render for a class — not
+ * to be confused with resolveECZLevel's 9-point-vs-5-point GRADING SCALE
+ * decision.
+ *
+ * Every Form-named class — Form 1 through Form 5, or "F1-A"/"F2-B" style —
+ * uses the Senior Secondary report card, the same document as Grade 10-12.
+ * Only a Grade 8/9 class that is NOT Form-named gets the Junior Secondary
+ * document.
+ *
+ * Real class-naming quirk this must handle: a school's Grade 8/9 records
+ * can have Form-prefixed class names ("F1-A", "F2-B") while the Grade
+ * record itself is still named "Grade 8"/"Grade 9" — so both gradeName and
+ * className are checked for the Form prefix, not just one.
+ */
+export function resolveReportCardLevel(
+  gradeLevel: PrismaGradeLevel | string,
+  gradeName?: string | null,
+  className?: string | null
+): "JUNIOR" | "SENIOR" {
+  if (isFormNamed(gradeName) || isFormNamed(className)) return "SENIOR";
+
+  if (gradeLevel === "GRADE_8" || gradeLevel === "GRADE_9") return "JUNIOR";
+  return "SENIOR";
 }
 
 /**

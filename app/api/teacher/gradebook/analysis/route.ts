@@ -48,5 +48,5 @@ export async function GET(request: NextRequest) {
         endpoint: "/api/teacher/gradebook/analysis",
       });
     }
-  })(request, {} as any);
+  })(request);
 }

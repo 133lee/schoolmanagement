@@ -87,5 +87,5 @@ export async function GET(request: NextRequest) {
         endpoint: "/api/admin/attendance/analytics",
       });
     }
-  })(request, {} as any);
+  })(request);
 }

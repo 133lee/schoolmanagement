@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -61,6 +61,7 @@ interface ClassData {
   capacity?: number;
   isClassTeacher: boolean;
   teachingSubject?: string;
+  teachingSubjectId?: string;
   status: string;
 }
 
@@ -73,6 +74,11 @@ interface StudentData {
 
 export default function TeacherClassesPage() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  // A teacher can teach the same class under two different subjects, in
+  // which case subjectTeacherClasses has two entries sharing the same
+  // classId — this disambiguates which row is selected. Set together with
+  // selectedClassId everywhere selection changes.
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [studentPage, setStudentPage] = useState(1);
   const [classTeacherPage, setClassTeacherPage] = useState(1);
@@ -94,7 +100,9 @@ export default function TeacherClassesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const allClasses = [...classTeacherClasses, ...subjectTeacherClasses];
-  const selectedClass = allClasses.find((c) => c.id === selectedClassId);
+  const selectedClass = allClasses.find(
+    (c) => c.id === selectedClassId && (c.teachingSubjectId ?? null) === selectedSubjectId
+  );
   const selectedStudents = selectedClassId ? studentsByClass[selectedClassId] || [] : [];
   const isClassTeacher = classTeacherClasses.some((c) => c.id === selectedClassId);
 
@@ -145,8 +153,10 @@ export default function TeacherClassesPage() {
 
         if (data.classTeacherClasses?.length > 0) {
           setSelectedClassId(data.classTeacherClasses[0].id);
+          setSelectedSubjectId(data.classTeacherClasses[0].teachingSubjectId ?? null);
         } else if (data.subjectTeacherClasses?.length > 0) {
           setSelectedClassId(data.subjectTeacherClasses[0].id);
+          setSelectedSubjectId(data.subjectTeacherClasses[0].teachingSubjectId ?? null);
         }
       } else if (response.status === 401) {
         setError("Unauthorized - please log in again");
@@ -249,24 +259,25 @@ export default function TeacherClassesPage() {
 
   // ── Export ───────────────────────────────────────────────────────────────────
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [pendingExport, setPendingExport] = useState<{ classId: string; mode: "class" | "subject" } | null>(null);
+  const [pendingExport, setPendingExport] = useState<{ classId: string; mode: "class" | "subject"; subjectId?: string } | null>(null);
   const [exportingFormat, setExportingFormat] = useState<"csv" | "pdf" | null>(null);
 
-  const handleExportClassListClick = (classId: string, mode: "class" | "subject") => {
-    setPendingExport({ classId, mode });
+  const handleExportClassListClick = (classId: string, mode: "class" | "subject", subjectId?: string) => {
+    setPendingExport({ classId, mode, subjectId });
     setExportDialogOpen(true);
   };
 
   const handleExportClassList = async (format: "csv" | "pdf") => {
     if (!pendingExport) return;
-    const { classId, mode } = pendingExport;
+    const { classId, mode, subjectId } = pendingExport;
     try {
       setExportingFormat(format);
       const token = localStorage.getItem("auth_token");
       if (!token) { toast.error("No authentication token found"); return; }
       toast.info(`Generating ${format.toUpperCase()} class list...`);
+      const subjectParam = mode === "subject" && subjectId ? `&subjectId=${subjectId}` : "";
       const response = await fetch(
-        `/api/teacher/classes/export-class-list?classId=${classId}&mode=${mode}&format=${format}`,
+        `/api/teacher/classes/export-class-list?classId=${classId}&mode=${mode}${subjectParam}&format=${format}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!response.ok) {
@@ -288,9 +299,9 @@ export default function TeacherClassesPage() {
       toast.success("Class list exported successfully");
       setExportDialogOpen(false);
       setPendingExport(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error exporting class list:", error);
-      toast.error(error.message || "Failed to export class list");
+      toast.error(getErrorMessage(error, "Failed to export class list"));
     } finally {
       setExportingFormat(null);
     }
@@ -375,13 +386,19 @@ export default function TeacherClassesPage() {
     classes.flatMap((classItem, index) => [
       // ── Mobile tappable row ────────────────────────────────────────────────
       <tr
-        key={`m-${classItem.id}`}
+        key={`m-${classItem.id}-${classItem.teachingSubjectId ?? "ct"}`}
         className={cn(
           "lg:hidden border-b cursor-pointer active:bg-muted/70 transition-colors",
           index % 2 === 0 ? "bg-background" : "bg-muted/30",
-          selectedClassId === classItem.id && "bg-primary/10"
+          selectedClassId === classItem.id &&
+            (classItem.teachingSubjectId ?? null) === selectedSubjectId &&
+            "bg-primary/10"
         )}
-        onClick={() => { setSelectedClassId(classItem.id); setMobileDetailOpen(true); }}
+        onClick={() => {
+          setSelectedClassId(classItem.id);
+          setSelectedSubjectId(classItem.teachingSubjectId ?? null);
+          setMobileDetailOpen(true);
+        }}
       >
         <td className="py-3.5 px-4" colSpan={4}>
           <div className="flex items-center justify-between gap-3">
@@ -404,11 +421,13 @@ export default function TeacherClassesPage() {
 
       // ── Desktop table row ──────────────────────────────────────────────────
       <tr
-        key={`d-${classItem.id}`}
+        key={`d-${classItem.id}-${classItem.teachingSubjectId ?? "ct"}`}
         className={cn(
           "hidden lg:table-row border-b hover:bg-muted/50 transition-colors",
           index % 2 === 0 ? "bg-background" : "bg-muted/30",
-          selectedClassId === classItem.id && "bg-primary/10"
+          selectedClassId === classItem.id &&
+            (classItem.teachingSubjectId ?? null) === selectedSubjectId &&
+            "bg-primary/10"
         )}
       >
         <td className="py-3 px-2">
@@ -433,14 +452,17 @@ export default function TeacherClassesPage() {
           <div className="flex gap-1 justify-center">
             <Button
               variant="outline" size="sm"
-              onClick={() => setSelectedClassId(classItem.id)}
+              onClick={() => {
+                setSelectedClassId(classItem.id);
+                setSelectedSubjectId(classItem.teachingSubjectId ?? null);
+              }}
               className="h-8 w-8 p-0" title="View details"
             >
               <Eye className="h-4 w-4" />
             </Button>
             <Button
               variant="outline" size="sm"
-              onClick={() => handleExportClassListClick(classItem.id, mode)}
+              onClick={() => handleExportClassListClick(classItem.id, mode, classItem.teachingSubjectId)}
               className="h-8 w-8 p-0" title="Export class list"
             >
               <Download className="h-4 w-4" />
@@ -908,7 +930,7 @@ export default function TeacherClassesPage() {
                     variant="outline"
                     size="sm"
                     className={cn("flex-1", !isClassTeacher && "w-full")}
-                    onClick={() => handleExportClassListClick(selectedClass.id, isClassTeacher ? "class" : "subject")}
+                    onClick={() => handleExportClassListClick(selectedClass.id, isClassTeacher ? "class" : "subject", selectedClass.teachingSubjectId)}
                   >
                     <Download className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                     <span className="truncate">Export</span>

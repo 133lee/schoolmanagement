@@ -6,9 +6,10 @@ import {
   PATCH as updateReportCard,
   DELETE as deleteReportCard,
 } from "@/app/api/report-cards/[id]/route";
-import { POST as bulkGenerate } from "@/app/api/report-cards/bulk/route";
+import { POST as bulkGenerate, DELETE as bulkDelete } from "@/app/api/report-cards/bulk/route";
 import { POST as calculatePositions } from "@/app/api/report-cards/positions/route";
 import { GET as getReportCardPdf } from "@/app/api/report-cards/[id]/pdf/route";
+import prisma from "@/lib/db/prisma";
 import { callRoute } from "../helpers/callRoute";
 import { loginAs } from "../helpers/auth";
 import {
@@ -228,6 +229,116 @@ describe("report-cards routes", () => {
       expect(status).toBe(200);
       expect(contentType).toBe("application/pdf");
       expect(byteLength).toBeGreaterThan(0);
+    });
+  });
+
+  describe("DELETE /api/report-cards/bulk", () => {
+    // 12 cards in the main class (more than the admin list's page size of
+    // 10 — the whole point of the class-wide delete) plus 3 in a sibling
+    // class that must survive it.
+    let otherClassId: string;
+
+    async function seedCards() {
+      const academicYear = await createTestAcademicYear({ year: 3100 });
+      const grade = await createTestGrade({ level: "GRADE_9", sequence: 9 });
+      const other = await createTestClass(grade.id, { name: "B" });
+      otherClassId = other.id;
+      await createTestClassSubject(otherClassId, (await createTestSubject()).id);
+
+      for (let i = 0; i < 12; i++) {
+        const s = await createTestStudent({ firstName: `Main${i}` });
+        await enrollTestStudent(s.id, classId, academicYear.id);
+      }
+      for (let i = 0; i < 3; i++) {
+        const s = await createTestStudent({ firstName: `Other${i}` });
+        await enrollTestStudent(s.id, otherClassId, academicYear.id);
+      }
+      for (const cid of [classId, otherClassId]) {
+        const res = await callRoute(bulkGenerate, {
+          method: "POST",
+          url: "/api/report-cards/bulk",
+          token: deputyHeadToken,
+          body: { classId: cid, termId, classTeacherId: teacherProfileId },
+        });
+        expect(res.status).toBe(201);
+      }
+    }
+
+    it("deletes every card for a class in one call — beyond the page size — and leaves other classes alone", async () => {
+      await seedCards();
+      expect(await prisma.reportCard.count({ where: { classId } })).toBe(12);
+      const subjectRowsBefore = await prisma.reportCardSubject.count({
+        where: { reportCard: { classId } },
+      });
+
+      const { status, json } = await callRoute<{ data: { deletedCount: number } }>(bulkDelete, {
+        method: "DELETE",
+        url: "/api/report-cards/bulk",
+        token: adminToken,
+        body: { filters: { classId, termId } },
+      });
+      expect(status).toBe(200);
+      expect(json.data.deletedCount).toBe(12);
+
+      expect(await prisma.reportCard.count({ where: { classId } })).toBe(0);
+      expect(await prisma.reportCard.count({ where: { classId: otherClassId } })).toBe(3);
+      // The class's per-subject rows go with their report cards (cascade).
+      expect(subjectRowsBefore).toBeGreaterThan(0);
+      expect(await prisma.reportCardSubject.count({ where: { reportCard: { classId } } })).toBe(0);
+    });
+
+    it("deletes only the given ids in explicit-selection mode", async () => {
+      await seedCards();
+      const some = await prisma.reportCard.findMany({ where: { classId }, take: 4, select: { id: true } });
+
+      const { status, json } = await callRoute<{ data: { deletedCount: number } }>(bulkDelete, {
+        method: "DELETE",
+        url: "/api/report-cards/bulk",
+        token: adminToken,
+        body: { ids: some.map((r) => r.id) },
+      });
+      expect(status).toBe(200);
+      expect(json.data.deletedCount).toBe(4);
+      expect(await prisma.reportCard.count({ where: { classId } })).toBe(8);
+    });
+
+    it("is admin-only — a DEPUTY_HEAD is refused and nothing is deleted", async () => {
+      await seedCards();
+      const denied = await callRoute(bulkDelete, {
+        method: "DELETE",
+        url: "/api/report-cards/bulk",
+        token: deputyHeadToken,
+        body: { filters: { classId } },
+      });
+      expect(denied.status).toBe(403);
+      expect(await prisma.reportCard.count({ where: { classId } })).toBe(12);
+    });
+
+    it("rejects malformed or unscoped requests without deleting anything", async () => {
+      await seedCards();
+      const total = await prisma.reportCard.count();
+
+      const bodies: Array<Record<string, unknown>> = [
+        {}, // neither ids nor filters
+        { ids: [] }, // empty selection
+        { ids: ["x"], filters: { classId } }, // both modes at once
+        { filters: {} }, // filter mode with nothing in it
+        { filters: { promotionStatus: PromotionStatus.PROMOTED } }, // an attribute, not a scope
+        { filters: { classId, bogus: true } }, // unknown key
+      ];
+      for (const body of bodies) {
+        const res = await callRoute(bulkDelete, {
+          method: "DELETE",
+          url: "/api/report-cards/bulk",
+          token: adminToken,
+          body,
+        });
+        // Shape errors (route-level Zod) come back as 422, the service's
+        // scope rule as 400 — two ValidationError classes in this codebase.
+        // What matters here is that every one is a client-error rejection.
+        expect([400, 422], JSON.stringify(body)).toContain(res.status);
+      }
+      expect(await prisma.reportCard.count()).toBe(total);
     });
   });
 });

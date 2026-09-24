@@ -45,6 +45,13 @@ export class ReportRepository {
     });
   }
 
+  async findGradeById(gradeId: string) {
+    return prisma.grade.findUnique({
+      where: { id: gradeId },
+      select: { id: true, level: true, name: true },
+    });
+  }
+
   async findGradesByLevels(levels: GradeLevel[]) {
     return prisma.grade.findMany({
       where: { level: { in: levels } },
@@ -56,6 +63,26 @@ export class ReportRepository {
   async findAllSubjects() {
     return prisma.subject.findMany({
       where: { deletedAt: null },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
+  /**
+   * Subjects actually offered somewhere in a grade (via ClassSubject on one
+   * of its active classes) — not every class in a grade teaches every
+   * subject (e.g. one stream takes Geography, another takes Religious
+   * Education), so the unscoped findAllSubjects() list is too broad for a
+   * grade-level subject filter.
+   */
+  async findSubjectsByGrade(gradeId: string) {
+    return prisma.subject.findMany({
+      where: {
+        deletedAt: null,
+        classSubjects: {
+          some: { class: { gradeId, status: "ACTIVE" } },
+        },
+      },
       select: { id: true, name: true, code: true },
       orderBy: { name: "asc" },
     });

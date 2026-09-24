@@ -8,6 +8,7 @@
  */
 
 import { logger } from "@/lib/logger/logger";
+import { getErrorMessage } from "@/lib/utils";
 
 export interface SMSSendResult {
   success: boolean;
@@ -148,12 +149,12 @@ export class AfricasTalkingService {
           error: data.SMSMessageData?.Message || "Failed to send SMS",
         };
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error("Error sending SMS via Africa's Talking", error instanceof Error ? error : undefined, { error });
 
       return {
         success: false,
-        error: error.message || "Unknown error occurred while sending SMS",
+        error: getErrorMessage(error, "Unknown error occurred while sending SMS"),
       };
     }
   }
@@ -234,10 +235,10 @@ export class AfricasTalkingService {
 
         return null;
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error("Error checking SMS balance", error instanceof Error ? error : undefined, {
-        errorMessage: error.message || "Unknown error",
-        errorName: error.name,
+        errorMessage: getErrorMessage(error, "Unknown error"),
+        errorName: error instanceof Error ? error.name : undefined,
       });
       return null;
     }
@@ -249,7 +250,7 @@ export class AfricasTalkingService {
    */
   private formatPhoneNumber(phone: string): string | null {
     // Remove all non-digit characters
-    let cleaned = phone.replace(/\D/g, "");
+    const cleaned = phone.replace(/\D/g, "");
 
     // Handle different formats
     if (cleaned.startsWith("260")) {
@@ -312,10 +313,10 @@ export class AfricasTalkingService {
           message: "Failed to connect to Africa's Talking API",
         };
       }
-    } catch (error: any) {
+    } catch (error) {
       return {
         success: false,
-        message: error.message || "Connection test failed",
+        message: getErrorMessage(error, "Connection test failed"),
       };
     }
   }

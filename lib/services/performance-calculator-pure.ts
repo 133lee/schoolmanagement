@@ -102,11 +102,17 @@ export function calculateBestSixPoints(
     };
   }
 
-  const cores = scores.filter(s => s.isCore);
-  const electives = scores.filter(s => !s.isCore);
+  // English is the only mandatory Best 6 member under the ECZ 9-point
+  // scale (English Language grade + the five best grades from all other
+  // subjects) — this is the rule itself, not something driven by each
+  // class's isCore curriculum flag (which isn't reliably configured for
+  // every class/grade). See computeBestOfSixFromReportCard below, which
+  // this mirrors.
+  const mandatory = scores.filter(s => isEnglish(s.subject));
+  const electives = scores.filter(s => !isEnglish(s.subject));
   const sortedElectives = [...electives].sort((a, b) => a.points - b.points);
-  const bestElectives = sortedElectives.slice(0, Math.max(0, 6 - cores.length));
-  const bestSix = [...cores, ...bestElectives];
+  const bestElectives = sortedElectives.slice(0, Math.max(0, 6 - mandatory.length));
+  const bestSix = [...mandatory, ...bestElectives];
   if (bestSix.length === 0) return null;
   return {
     value: bestSix.reduce((sum, s) => sum + s.points, 0),
@@ -149,11 +155,19 @@ function eczGradeToPoint(grade: string | null | undefined): number {
   return isNaN(n) ? 9 : n;
 }
 
+// Matches "English Language", "Literature in English", etc. Per the ECZ
+// rule: Best Six = English Language grade + the five best (lowest-point)
+// grades from ALL other subjects — Mathematics is not a mandatory member,
+// it just competes for those five slots like everything else.
+function isEnglish(subjectName: string): boolean {
+  return /\benglish/i.test(subjectName);
+}
+
 export function computeBestOfSixFromReportCard(
   subjects: Array<{
+    name: string;
     totalMark: number | null;
     grade: string | null;
-    isCore: boolean;
   }>,
   gradeLevel: string,
   gradeName?: string | null,
@@ -186,11 +200,17 @@ export function computeBestOfSixFromReportCard(
     return passing.reduce((sum, p) => sum + p, 0).toString();
   }
 
-  const cores = subjects.filter(s => s.isCore);
-  const electives = subjects
-    .filter(s => !s.isCore)
+  // NEW_SYSTEM (9-point, Form 1-5 / Grade 10-12): Best Six = English
+  // Language grade + the five best (lowest-point) grades from all other
+  // subjects — Mathematics is not mandatory, it just competes for those
+  // five slots like every other subject. This is the ECZ rule itself, not
+  // something driven by each class's isCore curriculum flag (which isn't
+  // reliably configured for every class).
+  const mandatory = subjects.filter(s => isEnglish(s.name));
+  const others = subjects
+    .filter(s => !isEnglish(s.name))
     .sort((a, b) => eczGradeToPoint(a.grade) - eczGradeToPoint(b.grade));
-  const bestSix = [...cores, ...electives.slice(0, Math.max(0, 6 - cores.length))];
+  const bestSix = [...mandatory, ...others.slice(0, Math.max(0, 6 - mandatory.length))];
   if (bestSix.length === 0) return '';
   return bestSix.reduce((sum, s) => sum + eczGradeToPoint(s.grade), 0).toString();
 }

@@ -1,4 +1,5 @@
 import { SecondaryTimetable, DayOfWeek } from "@/types/prisma-enums";
+import { formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import { secondaryTimetableRepository } from "./secondaryTimetable.repository";
 import { timeSlotRepository } from "./timeSlot.repository";
 import { termRepository } from "@/features/terms/term.repository";
@@ -402,9 +403,9 @@ export class SecondaryTimetableService {
           dayOfWeek: entry.dayOfWeek,
           timeSlotId: entry.timeSlotId,
         });
-      } catch (error: any) {
+      } catch (error) {
         errors.push(
-          `Entry for ${entry.dayOfWeek} ${entry.timeSlotId}: ${error.message}`
+          `Entry for ${entry.dayOfWeek} ${entry.timeSlotId}: ${getErrorMessage(error)}`
         );
       }
     }
@@ -456,12 +457,12 @@ export class SecondaryTimetableService {
           conflictingEntries: [
             {
               id: existingTeacherEntry.id,
-              className: `${existingTeacherEntry.class.grade.name} ${existingTeacherEntry.class.name}`,
+              className: formatCompactClassLabel(existingTeacherEntry.class.grade.name, existingTeacherEntry.class.name),
               subjectName: existingTeacherEntry.subject.name,
             },
             {
               id: entry.id,
-              className: `${entry.class.grade.name} ${entry.class.name}`,
+              className: formatCompactClassLabel(entry.class.grade.name, entry.class.name),
               subjectName: entry.subject.name,
             },
           ],
@@ -475,7 +476,7 @@ export class SecondaryTimetableService {
         classClashes.push({
           type: "class",
           classId: entry.classId,
-          className: `${entry.class.grade.name} ${entry.class.name}`,
+          className: formatCompactClassLabel(entry.class.grade.name, entry.class.name),
           timeSlotId: entry.timeSlotId,
           timeSlotLabel: entry.timeSlot.label,
           startTime: entry.timeSlot.startTime,

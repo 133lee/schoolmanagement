@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import {
   Sparkles,
   Download,
   MessageSquare,
+  Trash2,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -89,6 +90,14 @@ export default function AdminReportCardsPage() {
   const [bulkDownloadDialogOpen, setBulkDownloadDialogOpen] = useState(false);
   const [notifyParentsDialogOpen, setNotifyParentsDialogOpen] = useState(false);
 
+  // Bulk delete: explicit checked ids by default; "select all matching
+  // filters" switches to filter-based deletion so it isn't capped to
+  // whatever page happens to be loaded (see bulk ZIP download fix).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectAllMatchingFilters, setSelectAllMatchingFilters] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // Mobile-only: which of the row filters is currently focused/open.
   const [activeMobileFilter, setActiveMobileFilter] = useState<
     "grade" | "class" | "term" | "year" | "status" | null
@@ -109,13 +118,15 @@ export default function AdminReportCardsPage() {
     setClassFilter("all");
   };
 
-  const { reportCards, meta, isLoading, error, refetch, deleteReportCard } = useReportCards(
-    {
-      classId: classFilter !== "all" ? classFilter : undefined,
-      termId: termFilter !== "all" ? termFilter : undefined,
-      academicYearId: academicYearFilter !== "all" ? academicYearFilter : undefined,
-      promotionStatus: promotionStatusFilter !== "all" ? promotionStatusFilter : undefined,
-    },
+  const activeFilters = {
+    classId: classFilter !== "all" ? classFilter : undefined,
+    termId: termFilter !== "all" ? termFilter : undefined,
+    academicYearId: academicYearFilter !== "all" ? academicYearFilter : undefined,
+    promotionStatus: promotionStatusFilter !== "all" ? promotionStatusFilter : undefined,
+  };
+
+  const { reportCards, meta, isLoading, error, refetch, deleteReportCard, bulkDeleteReportCards } = useReportCards(
+    activeFilters,
     { page, pageSize }
   );
 
@@ -162,6 +173,86 @@ export default function AdminReportCardsPage() {
     } finally {
       setDeleteDialogOpen(false);
       setReportCardToDelete(null);
+    }
+  };
+
+  // Selection is tied to a specific filtered/paginated view — clear it
+  // whenever that view changes so a stale selection can't carry over.
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setSelectAllMatchingFilters(false);
+  }, [classFilter, termFilter, academicYearFilter, promotionStatusFilter, page]);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectAllMatchingFilters(false);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = (checked: boolean) => {
+    setSelectAllMatchingFilters(false);
+    setSelectedIds(checked ? new Set(reportCards.map((rc) => rc.id)) : new Set());
+  };
+
+  const selectedCount = selectAllMatchingFilters ? meta.total : selectedIds.size;
+
+  // Filter-based delete is only offered when the filters actually scope it to
+  // something (a class, term, or year) — the server rejects an unscoped one,
+  // so offering it would just lead to an error.
+  const hasDeleteScope = Boolean(
+    activeFilters.classId || activeFilters.termId || activeFilters.academicYearId
+  );
+
+  // Human-readable description of what a filter-based delete will remove,
+  // e.g. "10 A · Term 2", shown in the confirmation so it's unambiguous.
+  const scopeLabel = [
+    activeFilters.classId
+      ? (() => {
+          const c = allClasses.find((x) => x.id === activeFilters.classId);
+          return c
+            ? formatCompactClassLabel(grades.find((g) => g.id === c.gradeId)?.name, c.name)
+            : null;
+        })()
+      : null,
+    activeFilters.termId
+      ? formatTermLabel(terms.find((t) => t.id === activeFilters.termId)?.termType ?? "")
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const handleDeleteAllInClass = () => {
+    setSelectedIds(new Set());
+    setSelectAllMatchingFilters(true);
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    try {
+      setBulkDeleting(true);
+      const result = selectAllMatchingFilters
+        ? await bulkDeleteReportCards({ filters: activeFilters })
+        : await bulkDeleteReportCards({ ids: [...selectedIds] });
+      toast({
+        title: "Deleted",
+        description: `${result.deletedCount} report card${result.deletedCount === 1 ? "" : "s"} deleted successfully`,
+      });
+      setSelectedIds(new Set());
+      setSelectAllMatchingFilters(false);
+      setPage(1);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to bulk delete report cards",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteDialogOpen(false);
     }
   };
 
@@ -432,6 +523,58 @@ export default function AdminReportCardsPage() {
         </CardContent>
       </Card>
 
+      {/* One-click class-wide delete — shows as soon as a class is filtered, so
+          clearing a whole class doesn't need the filter → tick → "select all
+          matching" → delete sequence. Feeds the same bulk dialog/handler. */}
+      {activeFilters.classId && meta.total > 0 && selectedCount === 0 && !isLoading && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2.5">
+          <p className="text-sm">
+            <span className="font-medium">{scopeLabel}</span>
+            <span className="text-muted-foreground"> · {meta.total} report card{meta.total === 1 ? "" : "s"}</span>
+          </p>
+          <Button variant="destructive" size="sm" onClick={handleDeleteAllInClass}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete all {meta.total}
+          </Button>
+        </div>
+      )}
+
+      {/* Bulk selection toolbar — only visible once something is selected */}
+      {selectedCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/40 px-4 py-2.5">
+          <p className="text-sm">
+            <span className="font-medium">{selectedCount}</span> report card{selectedCount === 1 ? "" : "s"} selected
+            {!selectAllMatchingFilters && hasDeleteScope && meta.total > reportCards.length && (
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 ml-2 align-baseline"
+                onClick={() => setSelectAllMatchingFilters(true)}
+              >
+                Select all {meta.total} matching these filters
+              </Button>
+            )}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSelectedIds(new Set()); setSelectAllMatchingFilters(false); }}
+            >
+              Clear selection
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete {selectedCount}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table Card */}
       <Card>
         <CardContent className="p-0">
@@ -478,6 +621,14 @@ export default function AdminReportCardsPage() {
               onEdit={(rc) => { setSelectedReportCardId(rc.id); setEditDialogOpen(true); }}
               onDelete={handleDeleteClick}
               onPreview={(rc) => { setSheetReportCardId(rc.id); setSheetOpen(true); }}
+              selectable
+              selectedIds={
+                selectAllMatchingFilters
+                  ? new Set(reportCards.map((rc) => rc.id))
+                  : selectedIds
+              }
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={handleToggleSelectAll}
             />
           )}
         </CardContent>
@@ -577,6 +728,41 @@ export default function AdminReportCardsPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle>Delete {selectedCount} Report Card{selectedCount === 1 ? "" : "s"}</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-left pt-2">
+              {selectAllMatchingFilters ? (
+                <>
+                  Are you sure you want to delete <span className="font-semibold">all {selectedCount} report card{selectedCount === 1 ? "" : "s"}</span>
+                  {scopeLabel ? <> for <span className="font-semibold">{scopeLabel}</span></> : " matching these filters"}
+                  ? This includes every page, not just the ones shown.
+                </>
+              ) : (
+                <>Are you sure you want to delete {selectedCount === 1 ? "this report card" : `these ${selectedCount} report cards`}?</>
+              )}{" "}
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteConfirm}
+              disabled={bulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? "Deleting..." : `Delete ${selectedCount}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

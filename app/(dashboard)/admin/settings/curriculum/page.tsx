@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { formatCompactClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import Link from "next/link";
 import {
   Card,
@@ -182,12 +182,12 @@ export default function StreamCurriculumPage() {
       setGrades(gradesData.data || []);
       setClasses(classesData.data || []);
       setSubjects(subjectsData.data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching curriculum data:", error);
       toast({
         title: "Error",
         description:
-          error.message || "Unable to load curriculum data. Please try again.",
+          getErrorMessage(error, "Unable to load curriculum data. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -333,10 +333,10 @@ export default function StreamCurriculumPage() {
 
       // Refresh class subjects
       await fetchClassSubjects(selectedClass);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save curriculum",
+        description: getErrorMessage(error, "Failed to save curriculum"),
         variant: "destructive",
       });
       console.error("Error saving curriculum:", error);

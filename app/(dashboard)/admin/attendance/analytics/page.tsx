@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/table";
 import { StatsCard } from "@/components/shared/stats-card";
 import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/utils";
 
 interface GradeOption {
   id: string;
@@ -134,12 +135,12 @@ export default function AdminAttendanceAnalyticsPage() {
         }
 
         setLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error(
           "[Attendance Analytics] Error fetching initial data:",
           err
         );
-        setError(err.message || "Failed to load initial data");
+        setError(getErrorMessage(err, "Failed to load initial data"));
         setLoading(false);
       }
     }
@@ -184,7 +185,7 @@ export default function AdminAttendanceAnalyticsPage() {
             classesArray
           );
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("[Attendance Analytics] Error fetching classes:", err);
       }
     }
@@ -272,17 +273,12 @@ export default function AdminAttendanceAnalyticsPage() {
       }
 
       setDataLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error(
         "[Attendance Analytics] Error fetching attendance data:",
         err
       );
-      console.error("[Attendance Analytics] Error details:", {
-        message: err.message,
-        response: err.response,
-        status: err.status,
-      });
-      setError(err.message || "Failed to load attendance data");
+      setError(getErrorMessage(err, "Failed to load attendance data"));
       setDataLoading(false);
     }
   };

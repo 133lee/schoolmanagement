@@ -175,7 +175,7 @@ export function EditReportCardDialog({
                       />
                     </FormControl>
                     <FormDescription>
-                      Comments about the student's overall performance, behavior, and areas for improvement
+                      Comments about the student&apos;s overall performance, behavior, and areas for improvement
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -230,7 +230,7 @@ export function EditReportCardDialog({
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Student's promotion status for the next academic year
+                      Student&apos;s promotion status for the next academic year
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

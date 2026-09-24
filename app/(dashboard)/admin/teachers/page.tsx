@@ -320,9 +320,10 @@ export default function TeachersManagement() {
             >
               <Select
                 value={statusFilter}
-                onValueChange={(value) =>
-                  setStatusFilter(value as StaffStatus | "all")
-                }
+                onValueChange={(value) => {
+                  setStatusFilter(value as StaffStatus | "all");
+                  setPage(1);
+                }}
                 onOpenChange={(open) =>
                   setActiveMobileFilter(open ? "status" : null)
                 }>
@@ -348,9 +349,10 @@ export default function TeachersManagement() {
             >
               <Select
                 value={genderFilter}
-                onValueChange={(value) =>
-                  setGenderFilter(value as Gender | "all")
-                }
+                onValueChange={(value) => {
+                  setGenderFilter(value as Gender | "all");
+                  setPage(1);
+                }}
                 onOpenChange={(open) =>
                   setActiveMobileFilter(open ? "gender" : null)
                 }>
@@ -368,9 +370,10 @@ export default function TeachersManagement() {
           <div className="lg:hidden mt-2">
             <Select
               value={qualificationFilter}
-              onValueChange={(value) =>
-                setQualificationFilter(value as QualificationLevel | "all")
-              }>
+              onValueChange={(value) => {
+                setQualificationFilter(value as QualificationLevel | "all");
+                setPage(1);
+              }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Filter by Qualification" />
               </SelectTrigger>
@@ -408,9 +411,10 @@ export default function TeachersManagement() {
             </div>
             <Select
               value={statusFilter}
-              onValueChange={(value) =>
-                setStatusFilter(value as StaffStatus | "all")
-              }>
+              onValueChange={(value) => {
+                setStatusFilter(value as StaffStatus | "all");
+                setPage(1);
+              }}>
               <SelectTrigger className="w-32.5 shrink-0 transition-all duration-300 ease-in-out peer-focus-within:w-22.5">
                 <SelectValue placeholder="Filter by Status" />
               </SelectTrigger>
@@ -426,9 +430,10 @@ export default function TeachersManagement() {
             </Select>
             <Select
               value={genderFilter}
-              onValueChange={(value) =>
-                setGenderFilter(value as Gender | "all")
-              }>
+              onValueChange={(value) => {
+                setGenderFilter(value as Gender | "all");
+                setPage(1);
+              }}>
               <SelectTrigger className="w-27.5 shrink-0 transition-all duration-300 ease-in-out peer-focus-within:w-20">
                 <SelectValue placeholder="Filter by Gender" />
               </SelectTrigger>
@@ -440,9 +445,10 @@ export default function TeachersManagement() {
             </Select>
             <Select
               value={qualificationFilter}
-              onValueChange={(value) =>
-                setQualificationFilter(value as QualificationLevel | "all")
-              }>
+              onValueChange={(value) => {
+                setQualificationFilter(value as QualificationLevel | "all");
+                setPage(1);
+              }}>
               <SelectTrigger className="w-32.5 shrink-0 transition-all duration-300 ease-in-out peer-focus-within:w-22.5">
                 <SelectValue placeholder="Filter by Qualification" />
               </SelectTrigger>
@@ -529,6 +535,7 @@ export default function TeachersManagement() {
             <TeachersTable
               teachers={teachers}
               hideStaffNumberOnMobile
+              hideStatusBadgeOnMobile
               onRowClick={(teacher) => {
                 setSheetTeacherId(teacher.id);
                 setSheetOpen(true);
@@ -637,7 +644,7 @@ export default function TeachersManagement() {
               <span className="font-semibold">
                 {teacherToReset?.firstName} {teacherToReset?.lastName}
               </span>
-              's password to the default{" "}
+              &apos;s password to the default{" "}
               <span className="font-mono font-semibold">teacher123</span>. They
               will be prompted to change it on next login and will receive an SMS
               with their new credentials.

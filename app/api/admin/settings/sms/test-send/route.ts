@@ -41,5 +41,5 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "POST /api/admin/settings/sms/test-send" });
     }
-  })(request, {} as any);
+  })(request);
 }

@@ -20,6 +20,7 @@ import type {
   SubjectsResponse,
   TermsResponse,
 } from "@/types/hod-api.types";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function HODReportCardsPage() {
   const [activeTab, setActiveTab] = useState<"subject-analysis" | "performance-lists">(
@@ -75,9 +76,9 @@ export default function HODReportCardsPage() {
         }
 
         setLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching initial data:", err);
-        setError(err.message || "Failed to load initial data");
+        setError(getErrorMessage(err, "Failed to load initial data"));
         setLoading(false);
       }
     }
@@ -103,7 +104,7 @@ export default function HODReportCardsPage() {
         } else {
           setSelectedClass("");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching classes:", err);
         setClasses([]);
         setSelectedClass("");

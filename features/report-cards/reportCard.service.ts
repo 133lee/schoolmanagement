@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db/prisma";
 import { reportCardRepository } from "./reportCard.repository";
 import { reportCardSubjectRepository } from "./reportCardSubject.repository";
@@ -14,12 +15,22 @@ import {
   GradeLevel,
   ExamType,
   ECZGrade,
-  AttendanceStatus,
+  AssessmentStatus,
   Role,
 } from "@/types/prisma-enums";
+import { summarizeAttendance } from "@/features/attendance/attendance-summary";
 import { ValidationError, NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { requireMinimumRole, AuthContext } from "@/lib/auth/authorization";
 import { calculateECZGrade, resolveECZLevel } from "@/lib/grading/ecz-grading-system";
+import {
+  isPhysicsSubjectName,
+  isChemistrySubjectName,
+  hasRealMark,
+  combinePhysicsChemistryMark,
+  COMBINED_SCIENCE_LABEL,
+  type SubjectMarkRow,
+} from "@/lib/grading/combined-science";
+import { getErrorMessage } from "@/lib/utils";
 
 export type ServiceContext = AuthContext;
 
@@ -143,7 +154,7 @@ export class ReportCardService {
       where: {
         classId: data.classId,
         termId: data.termId,
-        status: "COMPLETED",
+        status: AssessmentStatus.COMPLETED,
       },
       include: {
         results: {
@@ -160,6 +171,9 @@ export class ReportCardService {
       catMark: number | null;
       midMark: number | null;
       eotMark: number | null;
+      catAbsent: boolean;
+      midAbsent: boolean;
+      eotAbsent: boolean;
       totalMark: number;
       grade: ECZGrade;
     }>();
@@ -173,13 +187,30 @@ export class ReportCardService {
       let catMark: number | null = null;
       let midMark: number | null = null;
       let eotMark: number | null = null;
+      let catAbsent = false;
+      let midAbsent = false;
+      let eotAbsent = false;
 
       for (const assessment of subjectAssessments) {
         const result = assessment.results[0];
         if (!result) continue;
 
-        // Convert to percentage
-        const percentage = (result.marksObtained / assessment.totalMarks) * 100;
+        // An absent result has marksObtained stored as 0 — that's not a
+        // real score, so it's excluded from the mark (stays null, dropped
+        // from the weighted average below) and flagged separately so the
+        // report card prints "AB" instead of a misleading 0%.
+        if (result.isAbsent) {
+          switch (assessment.examType) {
+            case ExamType.CAT: catAbsent = true; break;
+            case ExamType.MID: midAbsent = true; break;
+            case ExamType.EOT: eotAbsent = true; break;
+          }
+          continue;
+        }
+
+        // Convert to percentage — rounded to a whole number, report cards
+        // never display fractional marks.
+        const percentage = Math.round((result.marksObtained / assessment.totalMarks) * 100);
 
         switch (assessment.examType) {
           case ExamType.CAT:
@@ -212,9 +243,9 @@ export class ReportCardService {
         weightSum += 0.5;
       }
 
-      // Normalize if not all exams completed
+      // Normalize if not all exams completed, then round to a whole number
       if (weightSum > 0) {
-        totalMark = totalMark / weightSum;
+        totalMark = Math.round(totalMark / weightSum);
       }
 
       // Calculate grade using correct grading scale — grade name takes precedence
@@ -226,6 +257,9 @@ export class ReportCardService {
         catMark,
         midMark,
         eotMark,
+        catAbsent,
+        midAbsent,
+        eotAbsent,
         totalMark,
         grade,
       });
@@ -240,25 +274,27 @@ export class ReportCardService {
       subjectCount++;
     }
 
-    const averageMark = subjectCount > 0 ? totalMarks / subjectCount : 0;
+    const averageMark = subjectCount > 0 ? Math.round(totalMarks / subjectCount) : 0;
 
-    // Get attendance statistics
+    // Get attendance statistics from the DAILY register only — the one the
+    // class teacher takes once a day (timetableSlotId IS NULL). Period
+    // registers, taken by each subject teacher per lesson, are a different
+    // record of a different thing and don't belong on the report card.
     const attendanceRecords = await attendanceRecordRepository.findMany({
       where: {
         studentId: data.studentId,
         termId: data.termId,
+        timetableSlotId: null,
       },
     });
 
-    const daysPresent = attendanceRecords.filter(
-      (r) => r.status === AttendanceStatus.PRESENT || r.status === AttendanceStatus.LATE
-    ).length;
-
-    const daysAbsent = attendanceRecords.filter(
-      (r) => r.status === AttendanceStatus.ABSENT
-    ).length;
-
-    const attendance = attendanceRecords.length;
+    // Still collapsed to one outcome per day, so a repeated entry for the
+    // same date can't be double counted (see summarizeAttendance).
+    const {
+      totalDays: attendance,
+      daysPresent,
+      daysAbsent,
+    } = summarizeAttendance(attendanceRecords);
 
     // Create report card with subjects in transaction
     return reportCardRepository.withTransaction(async (tx) => {
@@ -289,6 +325,9 @@ export class ReportCardService {
             catMark: marks.catMark,
             midMark: marks.midMark,
             eotMark: marks.eotMark,
+            catAbsent: marks.catAbsent,
+            midAbsent: marks.midAbsent,
+            eotAbsent: marks.eotAbsent,
             totalMark: marks.totalMark,
             grade: marks.grade,
           },
@@ -385,10 +424,10 @@ export class ReportCardService {
           context
         );
         results.successful++;
-      } catch (error: any) {
+      } catch (error) {
         results.failed.push({
           studentId: enrollment.studentId,
-          error: error.message,
+          error: getErrorMessage(error),
         });
       }
     }
@@ -416,7 +455,51 @@ export class ReportCardService {
       throw new NotFoundError("Report card not found");
     }
 
-    return reportCard;
+    return this.applyCombinedScience(reportCard);
+  }
+
+  /**
+   * Grade 12 only: merges Physics + Chemistry into one "SCIENCE" entry
+   * whenever the student has a real mark in both (see
+   * lib/grading/combined-science.ts for the exact rule). Display-only —
+   * doesn't touch the stored report_card_subjects rows, so the overall
+   * average/position/best-of-six (computed earlier, from the real separate
+   * marks) are unaffected.
+   */
+  private applyCombinedScience<T extends { class: unknown; subjects: unknown[] }>(
+    reportCard: T
+  ): T {
+    // reportCardRepository.findMany's `include` param is typed as the broad
+    // Prisma.ReportCardInclude, not a per-call generic, so Prisma can't
+    // narrow `class`/`subjects`' inferred shape to what the actual queries
+    // include (grade, subject) — these casts reflect what the callers'
+    // queries really fetch.
+    const classData = reportCard.class as { grade?: { level?: string | null } | null } | null;
+    if (classData?.grade?.level !== "GRADE_12") return reportCard;
+
+    const subjects = reportCard.subjects as SubjectMarkRow[];
+    const physics = subjects.find((s) => isPhysicsSubjectName(s.subject.name));
+    const chemistry = subjects.find((s) => isChemistrySubjectName(s.subject.name));
+
+    if (!physics || !chemistry || !hasRealMark(physics) || !hasRealMark(chemistry)) {
+      return reportCard;
+    }
+
+    const merged = combinePhysicsChemistryMark(physics, chemistry);
+    const scienceRow = {
+      ...physics,
+      ...merged,
+      remarks: null,
+      subject: { ...physics.subject, name: COMBINED_SCIENCE_LABEL, code: COMBINED_SCIENCE_LABEL },
+    };
+
+    return {
+      ...reportCard,
+      subjects: [
+        ...subjects.filter((s) => s !== physics && s !== chemistry),
+        scienceRow,
+      ],
+    };
   }
 
   /**
@@ -444,20 +527,13 @@ export class ReportCardService {
   }
 
   /**
-   * List report cards with filters and pagination
+   * Build a Prisma where clause from ReportCardFilters — shared by
+   * listReportCards and bulkDeleteReportCards' filter-based mode so a
+   * "delete everything matching these filters" always targets exactly what
+   * the list view shows, not a separately-maintained copy of the mapping.
    */
-  async listReportCards(
-    filters: ReportCardFilters,
-    pagination: PaginationParams,
-    context: ServiceContext
-  ) {
-    // TEACHER+ can list report cards (includes HOD, DEPUTY_HEAD, HEAD_TEACHER, ADMIN)
-    requireMinimumRole(context, Role.TEACHER, "Only teachers and above can list report cards");
-
-    const { page, pageSize } = pagination;
-    const skip = (page - 1) * pageSize;
-
-    const where: any = {};
+  private buildWhere(filters: ReportCardFilters): Prisma.ReportCardWhereInput {
+    const where: Prisma.ReportCardWhereInput = {};
 
     if (filters.studentId) {
       where.studentId = filters.studentId;
@@ -478,6 +554,25 @@ export class ReportCardService {
     if (filters.promotionStatus) {
       where.promotionStatus = filters.promotionStatus;
     }
+
+    return where;
+  }
+
+  /**
+   * List report cards with filters and pagination
+   */
+  async listReportCards(
+    filters: ReportCardFilters,
+    pagination: PaginationParams,
+    context: ServiceContext
+  ) {
+    // TEACHER+ can list report cards (includes HOD, DEPUTY_HEAD, HEAD_TEACHER, ADMIN)
+    requireMinimumRole(context, Role.TEACHER, "Only teachers and above can list report cards");
+
+    const { page, pageSize } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const where = this.buildWhere(filters);
 
     const [reportCards, total] = await Promise.all([
       reportCardRepository.findMany({
@@ -508,7 +603,7 @@ export class ReportCardService {
     ]);
 
     return {
-      data: reportCards,
+      data: reportCards.map((rc) => this.applyCombinedScience(rc)),
       pagination: {
         page,
         pageSize,
@@ -531,6 +626,49 @@ export class ReportCardService {
     }
 
     return reportCardRepository.delete(id);
+  }
+
+  /**
+   * Bulk delete report cards — either an explicit set of ids (checked rows)
+   * or everything matching a filter set ("select all N matching your
+   * filters"). Filter-based deletion resolves server-side against the full
+   * matching set, not whatever page happened to be loaded client-side —
+   * the same class of bug already fixed in the bulk ZIP download, where a
+   * client-side-only view silently missed rows outside the current page.
+   */
+  async bulkDeleteReportCards(
+    params: { ids?: string[]; filters?: ReportCardFilters },
+    context: ServiceContext
+  ): Promise<{ deletedCount: number }> {
+    // Only ADMIN can delete report cards — same as single delete
+    requireMinimumRole(context, Role.ADMIN, "Only admins can delete report cards");
+
+    if (params.ids && params.ids.length > 0) {
+      const deletedCount = await reportCardRepository.deleteMany({ id: { in: params.ids } });
+      return { deletedCount };
+    }
+
+    if (params.filters) {
+      // A filter-based delete has to be anchored to something concrete — a
+      // class, term, year, or one student. A promotion-status filter alone
+      // ("every PROMOTED card in the school") is a filter on an attribute,
+      // not a scope, and one stray click would wipe report cards across
+      // every class and term.
+      const { classId, termId, academicYearId, studentId } = params.filters;
+      if (!classId && !termId && !academicYearId && !studentId) {
+        throw new ValidationError(
+          "Filter-based delete must include a class, term, academic year, or student"
+        );
+      }
+
+      const where = this.buildWhere(params.filters);
+      // One deleteMany statement, so it's atomic on its own — the class's
+      // ReportCardSubject rows go with it via the schema's onDelete: Cascade.
+      const deletedCount = await reportCardRepository.deleteMany(where);
+      return { deletedCount };
+    }
+
+    throw new ValidationError("Provide either ids or filters to bulk delete report cards");
   }
 
 }

@@ -35,7 +35,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Plus, Trash2, Edit2, AlertCircle, Search, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel } from "@/lib/utils";
 import type {
   Assignment,
   Teacher,
@@ -458,7 +458,7 @@ export default function HodClassAssignmentsPage() {
         <div className="flex flex-col items-end space-y-1">
           <h1 className="text-xl font-bold">Class Assignments</h1>
           <p className="text-muted-foreground text-sm">
-            {formatClassLabel(classData.grade.name, classData.name)}
+            {formatCompactClassLabel(classData.grade.name, classData.name)}
           </p>
         </div>
       </div>

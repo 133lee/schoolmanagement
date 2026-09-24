@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 
 interface ProfileData {
   id: string;
@@ -135,9 +136,9 @@ export default function AdminProfilePage() {
       const result = await response.json();
       setProfileData(result.data);
       toast.success("Profile updated successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error(error.message || "Failed to update profile");
+      toast.error(getErrorMessage(error, "Failed to update profile"));
     } finally {
       setSaving(false);
     }
@@ -189,9 +190,9 @@ export default function AdminProfilePage() {
       setNewPassword("");
       setConfirmPassword("");
       setShowPasswordForm(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error changing password:", error);
-      setPasswordError(error.message || "Failed to change password");
+      setPasswordError(getErrorMessage(error, "Failed to change password"));
     } finally {
       setChangingPassword(false);
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { formatClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -338,7 +338,7 @@ export default function EnrollStudentsPage() {
           <h1 className="text-2xl font-bold">Enroll Students</h1>
           <p className="text-sm text-muted-foreground">
             {classData
-              ? formatClassLabel(classData.grade.name, classData.name)
+              ? formatCompactClassLabel(classData.grade.name, classData.name)
               : "Select students to enroll"}
           </p>
         </div>

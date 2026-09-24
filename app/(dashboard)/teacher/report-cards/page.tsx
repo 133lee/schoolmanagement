@@ -46,6 +46,7 @@ import { StatsCard } from "@/components/shared/stats-card";
 import { useTerms } from "@/hooks/useTerms";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/utils";
 
 interface ClassData {
   id: string;
@@ -126,9 +127,9 @@ export default function TeacherReportCardsPage() {
         setReportCards(result.data || result || []);
         setTotalPages(result.meta?.totalPages || 1);
         setTotalCount(result.meta?.total || 0);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching report cards:", err);
-        setError(err.message || "Failed to load report cards");
+        setError(getErrorMessage(err, "Failed to load report cards"));
       } finally {
         setLoading(false);
       }

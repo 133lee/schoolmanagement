@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { renderToStream } from '@react-pdf/renderer';
 import { withAuth } from '@/lib/http/with-auth';
 import { handleApiError } from '@/lib/http/error-handler';
+import { NotFoundError } from '@/lib/http/errors';
+import { asPdfDocument } from '@/lib/pdf/as-pdf-document';
+import { formatAttendanceLabel } from '@/lib/report-cards/attendance-label';
 import { reportCardService } from '@/features/report-cards/reportCard.service';
 import { Role } from '@/types/prisma-enums';
 import { AuthContext } from '@/lib/auth/authorization';
@@ -13,6 +16,7 @@ import {
 import { getSchoolInfo, getSchoolLogoBase64 } from '@/lib/settings/school-info-helper';
 import { computeBestOfSixFromReportCard } from '@/lib/services/performance-calculator';
 import { pdfLimiter } from '@/lib/pdf/pdf-limiter';
+import { formatTeacherLabel, formatCompactClassLabel } from '@/lib/utils';
 import React from 'react';
 
 /**
@@ -28,38 +32,38 @@ export const GET = withAuth(
       const reportCard = await reportCardService.getReportCardWithRelations(id, context);
 
       if (!reportCard) {
-        return NextResponse.json({ success: false, error: 'Report card not found' }, { status: 404 });
+        throw new NotFoundError('Report card not found');
       }
 
       const schoolInfo = await getSchoolInfo();
       const logoBase64 = await getSchoolLogoBase64();
 
-      const gradeId = (reportCard.class as any).grade?.id || '';
-      const gradeLevel = (reportCard.class as any).grade?.level || '';
-      const gradeName = (reportCard.class as any).grade?.name || null;
-      const subjectsForBestSix = reportCard.subjects.map((sub) => {
-        const gs = (sub.subject as any).gradeSubjects?.find((g: any) => g.gradeId === gradeId);
-        return {
-          totalMark: sub.totalMark ?? null,
-          grade: sub.grade ?? null,
-          isCore: gs?.isCore ?? true,
-        };
-      });
+      const gradeLevel = reportCard.class.grade?.level || '';
+      const gradeName = reportCard.class.grade?.name || null;
+      const subjectsForBestSix = reportCard.subjects.map((sub) => ({
+        name: sub.subject.name,
+        totalMark: sub.totalMark ?? null,
+        grade: sub.grade ?? null,
+      }));
       const bestOfSix = computeBestOfSixFromReportCard(
         subjectsForBestSix, gradeLevel, gradeName, reportCard.class.name
       );
 
       const pdfData = {
         pupilName: `${reportCard.student.firstName} ${reportCard.student.middleName || ''} ${reportCard.student.lastName}`.trim(),
-        class: reportCard.class.name,
-        classTeacher: `${reportCard.classTeacher.firstName} ${reportCard.classTeacher.lastName}`,
+        // Grade-prefixed for display ("12 A") — Form classes ("F1-B") keep
+        // their own self-identifying name as-is.
+        class: formatCompactClassLabel(gradeName, reportCard.class.name),
+        classTeacher: formatTeacherLabel(reportCard.classTeacher),
         year: reportCard.academicYear.year.toString(),
         bestOfSix: bestOfSix || 'N/A',
+        attendance: formatAttendanceLabel(reportCard),
         status: reportCard.promotionStatus || 'In Progress',
         subjects: reportCard.subjects.map((sub) => ({
           name: sub.subject.name,
-          mid: sub.midMark ?? '-',
-          eot: sub.eotMark ?? '-',
+          cat: sub.catAbsent ? 'AB' : sub.catMark ?? '-',
+          mid: sub.midAbsent ? 'AB' : sub.midMark ?? '-',
+          eot: sub.eotAbsent ? 'AB' : sub.eotMark ?? '-',
           comment: sub.remarks || '',
         })),
         teacherComment: reportCard.classTeacherRemarks || '',
@@ -68,24 +72,17 @@ export const GET = withAuth(
         logoUrl: logoBase64 || undefined,
       };
 
-      const reportCardType = getReportCardType(reportCard.class.grade.level);
+      const reportCardType = getReportCardType(reportCard.class.grade.level, gradeName, reportCard.class.name);
 
-      let pdfComponent: any;
-      const createPdfEl = React.createElement as any;
-      switch (reportCardType) {
-        case 'JUNIOR':
-          pdfComponent = createPdfEl(JuniorReportCard, { data: pdfData });
-          break;
-        case 'SENIOR':
-        default:
-          pdfComponent = createPdfEl(SeniorReportCard, { data: pdfData });
-          break;
-      }
+      const pdfComponent =
+        reportCardType === 'JUNIOR'
+          ? React.createElement(JuniorReportCard, { data: pdfData })
+          : React.createElement(SeniorReportCard, { data: pdfData });
 
       // Generate PDF — rate-limited so concurrent requests queue rather than
       // saturating the CPU and blocking the entire Node.js event loop.
       const pdfBuffer = await pdfLimiter.run(async () => {
-        const stream = await renderToStream(pdfComponent as any);
+        const stream = await renderToStream(asPdfDocument(pdfComponent));
         const chunks: Uint8Array[] = [];
         for await (const chunk of stream) {
           chunks.push(chunk as unknown as Uint8Array);

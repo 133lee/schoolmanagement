@@ -50,5 +50,5 @@ export async function POST(request: NextRequest) {
         endpoint: "/api/sms/send",
       });
     }
-  })(request, {} as any);
+  })(request);
 }

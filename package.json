@@ -12,6 +12,7 @@
     "db:generate": "prisma generate && node scripts/fix-prisma-default-dts.js",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy && prisma generate",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:reset": "npx tsx scripts/reset-database.ts",

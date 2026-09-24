@@ -5,6 +5,7 @@ import { authService } from "@/features/auth/auth.service";
 import { loginSchema } from "@/features/auth/auth.validation";
 import { ZodError } from "zod";
 import { checkRateLimit, getClientIp } from "@/lib/http/rate-limit";
+import { logger } from "@/lib/logger/logger";
 
 const WINDOW_MS = 15 * 60 * 1000;
 
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: "Validation failed",
-          details: error.issues.map((err: any) => ({
+          details: error.issues.map((err) => ({
             field: err.path.join("."),
             message: err.message,
           })),
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error("Login error:", error);
+    logger.error("Login error", error instanceof Error ? error : undefined);
     return NextResponse.json(
       {
         success: false,

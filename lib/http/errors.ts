@@ -14,7 +14,7 @@ export class ApiError extends Error {
   constructor(
     public override message: string,
     public status: number,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -27,7 +27,7 @@ export class ApiError extends Error {
  * Used for invalid client input or malformed requests
  */
 export class BadRequestError extends ApiError {
-  constructor(message: string = "Bad request", details?: any) {
+  constructor(message: string = "Bad request", details?: unknown) {
     super(message, 400, details);
   }
 }
@@ -77,7 +77,7 @@ export class ConflictError extends ApiError {
  * Used for validation errors (semantic errors in well-formed requests)
  */
 export class ValidationError extends ApiError {
-  constructor(message: string = "Validation error", details?: any) {
+  constructor(message: string = "Validation error", details?: unknown) {
     super(message, 422, details);
   }
 }
@@ -87,7 +87,7 @@ export class ValidationError extends ApiError {
  * Used for unexpected server errors
  */
 export class InternalServerError extends ApiError {
-  constructor(message: string = "Internal server error", details?: any) {
+  constructor(message: string = "Internal server error", details?: unknown) {
     super(message, 500, details);
   }
 }

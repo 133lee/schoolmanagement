@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Calendar, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * Terms Management Page
@@ -117,11 +118,11 @@ export default function TermsManagement() {
       });
 
       fetchTerms(selectedYearId);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error activating term:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -145,11 +146,11 @@ export default function TermsManagement() {
       });
 
       fetchTerms(selectedYearId);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deactivating term:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -292,7 +293,7 @@ export default function TermsManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>What's Next?</CardTitle>
+          <CardTitle>What&apos;s Next?</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>

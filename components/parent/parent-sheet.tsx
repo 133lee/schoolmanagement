@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getErrorMessage } from "@/lib/utils";
 
 interface Student {
   id: string;
@@ -147,11 +148,11 @@ export function ParentSheet({
       // Refresh parent data
       const data = await getParent(parentId, true);
       setParent(data as GuardianWithRelations);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error unlinking student:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to unlink student",
+        description: getErrorMessage(error, "Failed to unlink student"),
         variant: "destructive",
       });
     } finally {

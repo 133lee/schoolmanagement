@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import React from "react";
 import { renderToStream } from "@react-pdf/renderer";
+import { asPdfDocument } from "@/lib/pdf/as-pdf-document";
 import { withAuth } from "@/lib/http/with-auth";
 import { handleApiError } from "@/lib/http/error-handler";
 import { ValidationError } from "@/lib/http/errors";
@@ -57,7 +58,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     });
 
     const pdfBuffer = await pdfLimiter.run(async () => {
-      const stream = await renderToStream(pdfComponent as any);
+      const stream = await renderToStream(asPdfDocument(pdfComponent));
       const chunks: Buffer[] = [];
       for await (const chunk of stream) {
         chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk));

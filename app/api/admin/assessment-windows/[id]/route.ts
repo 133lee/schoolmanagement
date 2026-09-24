@@ -25,5 +25,5 @@ export async function DELETE(
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: "DELETE /api/admin/assessment-windows/[id]" });
     }
-  })(request, {} as any);
+  })(request);
 }

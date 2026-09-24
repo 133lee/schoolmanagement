@@ -50,6 +50,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DesktopOnlyNotice } from "@/components/shared/desktop-only-notice";
+import { getErrorMessage } from "@/lib/utils";
 
 interface DoublePeriodConfig {
   subjectId: string;
@@ -161,8 +162,8 @@ export default function TimetableGeneratePage() {
       if (data.academicYear) {
         setAcademicYear(data.academicYear);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load configuration");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to load configuration"));
     } finally {
       setLoading(false);
     }
@@ -181,7 +182,7 @@ export default function TimetableGeneratePage() {
       if (data.data) {
         setSubjects(data.data);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to fetch subjects:", error);
     }
   };
@@ -222,8 +223,8 @@ export default function TimetableGeneratePage() {
 
       toast.success("Timetable configuration saved successfully");
       fetchConfiguration();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -301,8 +302,8 @@ export default function TimetableGeneratePage() {
           `Timetable generated with ${data.stats.conflicts} conflict${data.stats.conflicts !== 1 ? "s" : ""}`
         );
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setGenerating(false);
     }
@@ -340,7 +341,7 @@ export default function TimetableGeneratePage() {
       <div>
         <h1 className="text-3xl font-bold">Generate Timetable</h1>
         <p className="text-muted-foreground">
-          Configure your school's schedule, then generate the timetable
+          Configure your school&apos;s schedule, then generate the timetable
           {academicYear && ` for ${academicYear.year}`}
         </p>
       </div>
@@ -435,7 +436,7 @@ export default function TimetableGeneratePage() {
                       Period {formData.periodsBeforeBreak}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Follows "Periods Before Break" automatically
+                      Follows &quot;Periods Before Break&quot; automatically
                     </p>
                   </div>
 

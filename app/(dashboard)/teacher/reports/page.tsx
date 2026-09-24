@@ -11,9 +11,14 @@ import { ClassReportsStats } from "@/components/reports/class-reports-stats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubjectAnalysisContent } from "@/components/reports/subject-analysis-content";
 import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/utils";
 
 interface ClassOption {
-  id: string;
+  id: string; // classId alone is NOT unique here — a teacher can teach the
+  // same class under two different subjects, so this is `classId` or
+  // `classId__subjectId` when disambiguation is needed. Never parse it;
+  // use `classId` below for the real class id.
+  classId: string;
   name: string;
   grade: string;
   subject: string;
@@ -102,19 +107,54 @@ export default function ClassReportsPage() {
         const classesData = await api.get("/teacher/reports/classes");
 
         // API returns: { data: { allClasses: [...], classTeacherClasses: [...], subjectTeacherClasses: [...] } }
+        // A teacher can teach the SAME class under two different subjects —
+        // either as a class teacher personally teaching >1 subject there
+        // (c.teachingSubjects has every subject) or as a pure subject
+        // teacher (allClasses then has two entries sharing the same c.id,
+        // one per subject). Either way, expand to one row per (class,
+        // subject) pair with a globally-unique `id`, instead of collapsing
+        // to a single classId-keyed row that always resolves to the first
+        // subject found — see teacher/assessments/page.tsx for the same
+        // pattern already used correctly there.
         if (classesData.data?.allClasses) {
-          const classOptions: ClassOption[] = classesData.data.allClasses.map(
-            (c: any) => ({
-              id: c.id,
-              name: c.name,
-              grade: c.gradeLevel || c.grade, // API returns gradeLevel
-              subject: c.teachingSubject || c.subject || "All Subjects", // API returns teachingSubject
-              subjectCode: c.teachingSubjectCode || c.subjectCode || "",
-              enrolled: c.totalStudents || c.enrolled || 0, // API returns totalStudents
-              subjectId: c.teachingSubjectId, // API returns teachingSubjectId (optional - only for subject teachers)
-              isClassTeacher: c.isClassTeacher,
-            })
-          );
+          const classOptions: ClassOption[] = [];
+          for (const c of classesData.data.allClasses as any[]) {
+            const subjects: Array<{ id: string; name: string; code?: string }> =
+              c.teachingSubjects && c.teachingSubjects.length > 0
+                ? c.teachingSubjects
+                : c.teachingSubjectId
+                ? [{ id: c.teachingSubjectId, name: c.teachingSubject, code: c.teachingSubjectCode }]
+                : [];
+
+            if (subjects.length === 0) {
+              // Primary-grade class teacher with no single subject ("All Subjects")
+              classOptions.push({
+                id: c.id,
+                classId: c.id,
+                name: c.name,
+                grade: c.gradeLevel || c.grade,
+                subject: c.teachingSubject || c.subject || "All Subjects",
+                subjectCode: c.teachingSubjectCode || c.subjectCode || "",
+                enrolled: c.totalStudents || c.enrolled || 0,
+                subjectId: undefined,
+                isClassTeacher: c.isClassTeacher,
+              });
+            } else {
+              for (const s of subjects) {
+                classOptions.push({
+                  id: `${c.id}__${s.id}`,
+                  classId: c.id,
+                  name: c.name,
+                  grade: c.gradeLevel || c.grade,
+                  subject: s.name,
+                  subjectCode: s.code || "",
+                  enrolled: c.totalStudents || c.enrolled || 0,
+                  subjectId: s.id,
+                  isClassTeacher: c.isClassTeacher,
+                });
+              }
+            }
+          }
           setClasses(classOptions);
 
           // Auto-select first class if available
@@ -134,9 +174,9 @@ export default function ClassReportsPage() {
         }
 
         setLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching initial data:", err);
-        setError(err.message || "Failed to load initial data");
+        setError(getErrorMessage(err, "Failed to load initial data"));
         setLoading(false);
       }
     }
@@ -157,12 +197,20 @@ export default function ClassReportsPage() {
         setDataLoading(true);
         setError(null);
 
-        // Get subjectId from selected class (for subject teachers)
+        // Resolve the real classId + subjectId from the selected option —
+        // `selectedClass` is the composite selection key, not the classId.
         const selectedClassData = classes.find((c) => c.id === selectedClass);
         const subjectId = selectedClassData?.subjectId;
+        const classId = selectedClassData?.classId;
+        if (!classId) {
+          setReportCards([]);
+          setStats(null);
+          setDataLoading(false);
+          return;
+        }
 
         // Build API URL with optional subjectId
-        let url = `/teacher/reports?classId=${selectedClass}&termId=${selectedTerm}`;
+        let url = `/teacher/reports?classId=${classId}&termId=${selectedTerm}`;
         if (subjectId) {
           url += `&subjectId=${subjectId}`;
         }
@@ -172,9 +220,9 @@ export default function ClassReportsPage() {
         setReportCards(result.data?.reportCards || []);
         setStats(result.data?.stats || null);
         setDataLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching report cards:", err);
-        setError(err.message || "Failed to load report cards");
+        setError(getErrorMessage(err, "Failed to load report cards"));
         setDataLoading(false);
       }
     }
@@ -204,7 +252,7 @@ export default function ClassReportsPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="space-y-4">
+        <div className="space-y-4 mt-5 lg:mt-0">
           <div className="flex gap-2">
             <Skeleton className="h-9 flex-1" />
             <Skeleton className="h-9 flex-1" />
@@ -229,7 +277,7 @@ export default function ClassReportsPage() {
           onValueChange={(v) =>
             setActiveTab(v as "class-reports" | "subject-analysis")
           }
-          className="w-full mt-3 lg:mt-0">
+          className="w-full mt-5 lg:mt-0">
           <TabsList className="grid w-full grid-cols-2 bg-muted/50">
             <TabsTrigger
               value="class-reports"
@@ -385,7 +433,7 @@ export default function ClassReportsPage() {
                 return (
                   <SubjectAnalysisContent
                     subjectId={selectedClassData.subjectId}
-                    classId={selectedClass}
+                    classId={selectedClassData.classId}
                     subject={selectedClassData.subject}
                     className={selectedClassData.name}
                     termId={selectedTerm}

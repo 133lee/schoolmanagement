@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any --
+   This client is intentionally untyped: `T` defaults to `any` and each call
+   site narrows it (`api.get<Foo>(...)`). Defaulting to `unknown` would force a
+   cast at every existing untyped UI call. Typed per-endpoint responses are the
+   real fix; until then the untyped default is the contract. */
 /**
  * API Client Utility
  *

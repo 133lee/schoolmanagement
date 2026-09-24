@@ -5,6 +5,7 @@ import { ApiResponse } from "@/lib/http/api-response";
 import { handleApiError } from "@/lib/http/error-handler";
 import { subjectTeacherAssignmentService } from "@/features/subject-teacher-assignments/subjectTeacherAssignment.service";
 import { logger } from "@/lib/logger/logger";
+import { Role } from "@/types/prisma-enums";
 
 /**
  * GET /api/hod/assignments/by-teacher/[teacherId]
@@ -37,7 +38,7 @@ export const GET = withHODAccess(
       const result = await subjectTeacherAssignmentService.listAssignmentsForHOD(
         { teacherId, academicYearId },
         { page: 1, pageSize: 100 }, // No pagination for teacher view
-        { userId: user.userId, role: user.role as any, departmentId: hodDept.id }
+        { userId: user.userId, role: user.role as Role, departmentId: hodDept.id }
       );
 
       return ApiResponse.success(result.data);

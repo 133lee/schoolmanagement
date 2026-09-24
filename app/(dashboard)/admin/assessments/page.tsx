@@ -290,8 +290,16 @@ export default function AdminAssessmentsPage() {
   const [terms, setTerms] = useState<Array<{ id: string; termType: string; academicYear?: { year: number } }>>([]);
   const [classFilter, setClassFilter] = useState("all");
   const [termFilter, setTermFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<AssessmentStatus | "all">("all");
+  // "active" (default) hides DRAFT — teachers' scratch work isn't useful
+  // noise for admin to scan through. "all" shows everything, drafts
+  // included, when explicitly chosen.
+  const [statusFilter, setStatusFilter] = useState<AssessmentStatus | "all" | "active">("active");
   const [examTypeFilter, setExamTypeFilter] = useState<ExamType | "all">("all");
+  const [statusCounts, setStatusCounts] = useState<Record<AssessmentStatus, number>>({
+    DRAFT: 0,
+    PUBLISHED: 0,
+    COMPLETED: 0,
+  });
   const [page, setPage] = useState(1);
   const [actionTarget, setActionTarget] = useState<Assessment | null>(null);
   const [actionType, setActionType] = useState<"publish" | "complete" | "reopen" | null>(null);
@@ -325,11 +333,17 @@ export default function AdminAssessmentsPage() {
       const params = new URLSearchParams({ page: page.toString(), pageSize: "20" });
       if (classFilter !== "all") params.set("classId", classFilter);
       if (termFilter !== "all") params.set("termId", termFilter);
-      if (statusFilter !== "all") params.set("status", statusFilter);
+      // "active" isn't a real status — it means "don't filter server-side,
+      // hide DRAFT client-side" (see `filtered` below), so no status param.
+      if (statusFilter !== "all" && statusFilter !== "active") params.set("status", statusFilter);
       if (examTypeFilter !== "all") params.set("examType", examTypeFilter);
       const res = await fetch(`/api/assessments?${params}`, { headers: { Authorization: `Bearer ${tok()}` } });
       const d = await res.json();
-      if (res.ok) { setAssessments(d.data ?? []); setMeta(d.meta ?? { total: 0, page: 1, pageSize: 20, totalPages: 0 }); }
+      if (res.ok) {
+        setAssessments(d.data ?? []);
+        setMeta(d.meta ?? { total: 0, page: 1, pageSize: 20, totalPages: 0 });
+        if (d.meta?.statusCounts) setStatusCounts(d.meta.statusCounts);
+      }
     } finally { setLoading(false); }
   }, [classFilter, termFilter, statusFilter, examTypeFilter, page]);
 
@@ -389,10 +403,12 @@ export default function AdminAssessmentsPage() {
     } finally { setDeletingWindow(false); setDeleteWindowTarget(null); }
   };
 
-  const hasFilters = classFilter !== "all" || termFilter !== "all" || statusFilter !== "all" || examTypeFilter !== "all";
-  const filtered = search.trim()
+  const hasFilters = classFilter !== "all" || termFilter !== "all" || statusFilter !== "active" || examTypeFilter !== "all";
+  const searched = search.trim()
     ? assessments.filter((a) => `${a.title} ${a.subject.name} ${a.class.name}`.toLowerCase().includes(search.toLowerCase()))
     : assessments;
+  const filtered = statusFilter === "active" ? searched.filter((a) => a.status !== "DRAFT") : searched;
+  const hiddenDraftCount = statusFilter === "active" ? statusCounts.DRAFT : 0;
 
   return (
     <div className="space-y-5 px-4 lg:px-0">
@@ -426,6 +442,27 @@ export default function AdminAssessmentsPage() {
               Assessments must be <strong>Completed</strong> before report cards can include their marks.
               Teachers can only publish once the entry window for that exam type is open.
             </p>
+          </div>
+
+          {/* ── Status summary — click a card to jump to that status.
+              Counts reflect the class/term/exam-type filters but not the
+              status filter itself, so they stay stable while switching
+              between statuses. ─────────────────────────────────────────── */}
+          <div className="grid grid-cols-3 gap-3">
+            {(["DRAFT", "PUBLISHED", "COMPLETED"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => { setStatusFilter(s); setPage(1); }}
+                className={cn(
+                  "rounded-lg border px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                  statusFilter === s ? "border-primary/50 bg-muted/40" : "border-border"
+                )}
+              >
+                <p className="text-xs text-muted-foreground">{STATUS_VARIANTS[s].label}</p>
+                <p className="text-2xl font-semibold tabular-nums mt-0.5">{statusCounts[s]}</p>
+              </button>
+            ))}
           </div>
 
           <Card>
@@ -471,11 +508,12 @@ export default function AdminAssessmentsPage() {
                     </Select>
                   </div>
                   <div className={cn("min-w-0 transition-all duration-200", activeMobileFilter === "status" ? "flex-none max-w-[70%]" : "flex-1")}>
-                    <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as AssessmentStatus | "all"); setPage(1); }} onOpenChange={(open) => setActiveMobileFilter(open ? "status" : null)}>
+                    <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as AssessmentStatus | "all" | "active"); setPage(1); }} onOpenChange={(open) => setActiveMobileFilter(open ? "status" : null)}>
                       <SelectTrigger className={cn("h-9", activeMobileFilter === "status" ? "w-fit max-w-full" : "w-full")}><SelectValue placeholder="Status" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="DRAFT">Draft</SelectItem>
+                        <SelectItem value="active">Published + Completed</SelectItem>
+                        <SelectItem value="all">All Statuses (incl. Drafts)</SelectItem>
+                        <SelectItem value="DRAFT">Draft only</SelectItem>
                         <SelectItem value="PUBLISHED">Published</SelectItem>
                         <SelectItem value="COMPLETED">Completed</SelectItem>
                       </SelectContent>
@@ -483,7 +521,7 @@ export default function AdminAssessmentsPage() {
                   </div>
                 </div>
                 {hasFilters && (
-                  <Button variant="ghost" size="sm" className="text-muted-foreground self-start" onClick={() => { setClassFilter("all"); setTermFilter("all"); setStatusFilter("all"); setExamTypeFilter("all"); setPage(1); }}>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground self-start" onClick={() => { setClassFilter("all"); setTermFilter("all"); setStatusFilter("active"); setExamTypeFilter("all"); setPage(1); }}>
                     Clear filters
                   </Button>
                 )}
@@ -518,17 +556,18 @@ export default function AdminAssessmentsPage() {
                     <SelectItem value="EOT">End of Term</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as AssessmentStatus | "all"); setPage(1); }}>
-                  <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as AssessmentStatus | "all" | "active"); setPage(1); }}>
+                  <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="DRAFT">Draft</SelectItem>
+                    <SelectItem value="active">Published + Completed</SelectItem>
+                    <SelectItem value="all">All Statuses (incl. Drafts)</SelectItem>
+                    <SelectItem value="DRAFT">Draft only</SelectItem>
                     <SelectItem value="PUBLISHED">Published</SelectItem>
                     <SelectItem value="COMPLETED">Completed</SelectItem>
                   </SelectContent>
                 </Select>
                 {hasFilters && (
-                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setClassFilter("all"); setTermFilter("all"); setStatusFilter("all"); setExamTypeFilter("all"); setPage(1); }}>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setClassFilter("all"); setTermFilter("all"); setStatusFilter("active"); setExamTypeFilter("all"); setPage(1); }}>
                     Clear filters
                   </Button>
                 )}
@@ -537,6 +576,14 @@ export default function AdminAssessmentsPage() {
                   Refresh
                 </Button>
               </div>
+              {hiddenDraftCount > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {hiddenDraftCount} draft{hiddenDraftCount === 1 ? "" : "s"} hidden —{" "}
+                  <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={() => { setStatusFilter("DRAFT"); setPage(1); }}>
+                    view drafts
+                  </button>
+                </p>
+              )}
             </CardContent>
           </Card>
 

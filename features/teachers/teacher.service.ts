@@ -12,6 +12,7 @@ import prisma from "@/lib/db/prisma";
 import bcrypt from "bcryptjs";
 import { UnauthorizedError, NotFoundError, ValidationError } from "@/lib/errors";
 import { sendStaffSms } from "@/lib/sms/send-staff-sms";
+import { logger } from "@/lib/logger/logger";
 
 /**
  * Teacher Service - Business Logic Layer
@@ -390,7 +391,7 @@ export class TeacherService {
     sendStaffSms(
       input.phone,
       `Your school system account has been created.\nEmail: ${input.email}\nPassword: teacher123\nPlease log in and change your password immediately.`
-    ).catch((err) => console.error("Account creation SMS failed:", err));
+    ).catch((err) => logger.error("Account creation SMS failed", err instanceof Error ? err : undefined));
 
     // Assign subjects to the teacher
     const permissibleSubjectIds = input.permissibleSubjectIds ?? [];
@@ -789,7 +790,7 @@ export class TeacherService {
     sendStaffSms(
       teacher.phone,
       `Your school system password has been reset by an administrator.\nEmail: ${teacher.user.email}\nNew password: ${DEFAULT_PASSWORD}\nPlease log in and change your password immediately.`
-    ).catch((err) => console.error("Password reset SMS failed:", err));
+    ).catch((err) => logger.error("Password reset SMS failed", err instanceof Error ? err : undefined));
   }
 
   /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -248,8 +248,8 @@ export default function EnterResultsPage() {
         }));
         setShowAutoSaveSuccess(true);
         setTimeout(() => setShowAutoSaveSuccess(false), 2000);
-      } catch (err: any) {
-        toast({ title: "Auto-save Failed", description: err.message || "Failed to save", variant: "destructive" });
+      } catch (err) {
+        toast({ title: "Auto-save Failed", description: getErrorMessage(err, "Failed to save"), variant: "destructive" });
       } finally {
         setSavingStudentId(null);
       }
@@ -394,8 +394,8 @@ export default function EnterResultsPage() {
         description: `${data.successful ?? payload.length} result(s) saved${data.failed?.length ? `, ${data.failed.length} failed` : ""}`,
       });
       fetchExistingResults();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to save", variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Error", description: getErrorMessage(err, "Failed to save"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -532,7 +532,7 @@ export default function EnterResultsPage() {
           <h1 className="hidden lg:block text-xl font-bold">Enter Results</h1>
           <p className="text-sm font-medium text-foreground lg:font-normal lg:text-muted-foreground">
             {assessment.subject.name} &bull;{" "}
-            {formatClassLabel(assessment.class.grade.name, assessment.class.name)}
+            {formatCompactClassLabel(assessment.class.grade.name, assessment.class.name)}
           </p>
         </div>
       </div>

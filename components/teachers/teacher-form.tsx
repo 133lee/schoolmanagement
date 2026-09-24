@@ -275,7 +275,7 @@ export function TeacherForm({
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Personal Information</h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter the teacher's basic personal details
+                  Enter the teacher&apos;s basic personal details
                 </p>
               </div>
 
@@ -495,7 +495,7 @@ export function TeacherForm({
                         />
                       </FormControl>
                       <FormDescription>
-                        Teacher's email (used for login with default password:
+                        Teacher&apos;s email (used for login with default password:
                         teacher123)
                       </FormDescription>
                       <FormMessage />
@@ -782,7 +782,7 @@ export function TeacherForm({
                       </h4>
                       <p className="text-xs text-muted-foreground">
                         Extra subjects this teacher may also teach, limited to
-                        the primary or secondary subject's department
+                        the primary or secondary subject&apos;s department
                       </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

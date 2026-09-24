@@ -3,6 +3,7 @@ import { NotFoundError, ForbiddenError } from "@/lib/http/errors";
 import { logger } from "@/lib/logger/logger";
 import { teacherClassService } from "./teacher-class.service";
 import { resolveECZLevel } from "@/lib/grading/ecz-grading-system";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { GradeLevel as PrismaGradeLevel } from "@prisma/client";
 import {
   ReportCardView,
@@ -177,7 +178,7 @@ export class TeacherReportService {
       stats,
       classInfo: {
         id: classInfo.id,
-        name: `${classInfo.grade.name} ${classInfo.name}`,
+        name: formatCompactClassLabel(classInfo.grade.name, classInfo.name),
         grade: classInfo.grade.name,
       },
       termInfo: {

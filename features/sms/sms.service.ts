@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { SMSStatus, SMSProvider, Role } from "@/types/prisma-enums";
 import { smsLogRepository } from "./smsLog.repository";
 import { smsTemplateRepository } from "./smsTemplate.repository";
@@ -10,6 +11,7 @@ import { UnauthorizedError, NotFoundError, ValidationError } from "@/lib/errors"
 import { AuthContext } from "@/lib/auth/authorization";
 import { hasRoleAuthority } from "@/lib/auth/role-hierarchy";
 import { logger } from "@/lib/logger/logger";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * SMS Service - Business Logic Layer
@@ -323,17 +325,17 @@ export class SMSService {
         } else {
           failed++;
         }
-      } catch (error: any) {
+      } catch (error) {
         logger.error("Error sending SMS to recipient", error instanceof Error ? error : undefined, {
           guardianId: recipient.guardianId,
-          error: error.message,
+          error: getErrorMessage(error),
         });
 
         results.push({
           guardianId: recipient.guardianId,
           success: false,
           logId: "",
-          error: error.message,
+          error: getErrorMessage(error),
         });
 
         failed++;
@@ -430,7 +432,7 @@ export class SMSService {
       throw new UnauthorizedError("You do not have permission to view SMS logs");
     }
 
-    const where: any = {};
+    const where: Prisma.SMSLogWhereInput = {};
 
     if (filters.guardianId) where.guardianId = filters.guardianId;
     if (filters.studentId) where.studentId = filters.studentId;
@@ -439,9 +441,10 @@ export class SMSService {
     if (filters.sentBy) where.sentBy = filters.sentBy;
 
     if (filters.dateFrom || filters.dateTo) {
-      where.createdAt = {};
-      if (filters.dateFrom) where.createdAt.gte = filters.dateFrom;
-      if (filters.dateTo) where.createdAt.lte = filters.dateTo;
+      const createdAt: Prisma.DateTimeFilter = {};
+      if (filters.dateFrom) createdAt.gte = filters.dateFrom;
+      if (filters.dateTo) createdAt.lte = filters.dateTo;
+      where.createdAt = createdAt;
     }
 
     const skip = (pagination.page - 1) * pagination.pageSize;

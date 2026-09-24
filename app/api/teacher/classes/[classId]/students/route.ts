@@ -32,5 +32,5 @@ export async function GET(
         endpoint: `/api/teacher/classes/[classId]/students`,
       });
     }
-  })(request, {} as any);
+  })(request);
 }

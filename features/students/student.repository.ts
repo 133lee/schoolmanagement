@@ -162,6 +162,20 @@ export class StudentRepository {
   }
 
   /**
+   * Update student within an existing transaction
+   */
+  updateInTransaction(
+    tx: Prisma.TransactionClient,
+    id: string,
+    data: Prisma.StudentUpdateInput
+  ): Promise<Student> {
+    return tx.student.update({
+      where: { id },
+      data,
+    });
+  }
+
+  /**
    * Delete student by ID
    */
   delete(id: string): Promise<Student> {

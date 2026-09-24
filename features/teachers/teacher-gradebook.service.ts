@@ -1,6 +1,7 @@
 import prisma from "@/lib/db/prisma";
 import { logger } from "@/lib/logger/logger";
 import { NotFoundError, BadRequestError } from "@/lib/http/errors";
+import type { ExamType } from "@/types/prisma-enums";
 import { teacherStudentService } from "./teacher-student.service";
 import { reportService } from "@/features/reports/report.service";
 import {
@@ -180,7 +181,7 @@ export class TeacherGradebookService {
         subjectId,
         classId,
         termId: term.id,
-        examType: examType as any,
+        examType: examType as ExamType,
         status: {
           in: ["PUBLISHED", "COMPLETED"],
         },

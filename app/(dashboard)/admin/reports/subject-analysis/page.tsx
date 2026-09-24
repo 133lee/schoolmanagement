@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { AdminSubjectAnalysisContent } from "@/components/admin/admin-subject-analysis-content";
 import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/utils";
 
 interface GradeOption {
   id: string;
@@ -97,9 +98,9 @@ export default function AdminSubjectAnalysisPage() {
       }
 
       setLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching initial data:", err);
-      setError(err.message || "Failed to load initial data");
+      setError(getErrorMessage(err, "Failed to load initial data"));
       setLoading(false);
     }
   };

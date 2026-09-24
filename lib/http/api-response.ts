@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
  * Ensures uniform structure for success and error responses.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- default payload type; callers narrow it
 export interface ApiSuccessResponse<T = any> {
   success: true;
   data: T;
@@ -15,6 +16,7 @@ export interface ApiSuccessResponse<T = any> {
     pageSize?: number;
     total?: number;
     totalPages?: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- open-ended pagination extras
     [key: string]: any;
   };
 }
@@ -22,7 +24,7 @@ export interface ApiSuccessResponse<T = any> {
 export interface ApiErrorResponse {
   success: false;
   error: string;
-  details?: any;
+  details?: unknown;
 }
 
 export class ApiResponse {
@@ -56,9 +58,9 @@ export class ApiResponse {
    * @param message - Error message
    * @param details - Optional error details (validation errors, etc.)
    */
-  static badRequest(message: string = "Bad request", details?: any): NextResponse<ApiErrorResponse> {
+  static badRequest(message: string = "Bad request", details?: unknown): NextResponse<ApiErrorResponse> {
     return NextResponse.json(
-      { success: false, error: message, ...(details && { details }) },
+      { success: false, error: message, ...(details ? { details } : {}) },
       { status: 400 }
     );
   }
@@ -91,9 +93,9 @@ export class ApiResponse {
    * Conflict error (409 Conflict)
    * @param message - Error message
    */
-  static conflict(message: string = "Resource conflict", details?: any): NextResponse<ApiErrorResponse> {
+  static conflict(message: string = "Resource conflict", details?: unknown): NextResponse<ApiErrorResponse> {
     return NextResponse.json(
-      { success: false, error: message, ...(details && { details }) },
+      { success: false, error: message, ...(details ? { details } : {}) },
       { status: 409 }
     );
   }
@@ -105,10 +107,10 @@ export class ApiResponse {
    */
   static internalError(
     message: string = "Internal server error",
-    details?: any
+    details?: unknown
   ): NextResponse<ApiErrorResponse> {
     return NextResponse.json(
-      { success: false, error: message, ...(details && { details }) },
+      { success: false, error: message, ...(details ? { details } : {}) },
       { status: 500 }
     );
   }
@@ -119,9 +121,9 @@ export class ApiResponse {
    * @param status - HTTP status code
    * @param details - Optional error details
    */
-  static error(message: string, status: number, details?: any): NextResponse<ApiErrorResponse> {
+  static error(message: string, status: number, details?: unknown): NextResponse<ApiErrorResponse> {
     return NextResponse.json(
-      { success: false, error: message, ...(details && { details }) },
+      { success: false, error: message, ...(details ? { details } : {}) },
       { status }
     );
   }

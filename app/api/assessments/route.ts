@@ -29,7 +29,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       context
     );
 
-    return ApiResponse.success(result.data, result.pagination);
+    return ApiResponse.success(result.data, { ...result.pagination, statusCounts: result.statusCounts });
   } catch (error) {
     return handleApiError(error, { userId: user.userId, endpoint: "GET /api/assessments" });
   }

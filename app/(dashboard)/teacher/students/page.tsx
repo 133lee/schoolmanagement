@@ -287,7 +287,7 @@ export default function TeacherStudentsPage() {
                   {/* Class info chip */}
                   {data?.view === "class-teacher" && data.class && (
                     <div className="flex items-center gap-1.5 text-xs">
-                      <span className="font-semibold text-foreground">{data.class.name}</span>
+                      <span className="font-semibold text-foreground">{formatCompactClassLabel(data.class.grade, data.class.name)}</span>
                       <span className="text-muted-foreground">·</span>
                       <span className="text-muted-foreground">{data.class.enrolled}/{data.class.capacity} students</span>
                     </div>
@@ -331,7 +331,7 @@ export default function TeacherStudentsPage() {
                     <div className="flex items-center gap-3 px-3 py-2 bg-muted/50 rounded-md">
                       <div>
                         <h3 className="text-sm font-semibold">
-                          {data.class.name}
+                          {formatCompactClassLabel(data.class.grade, data.class.name)}
                         </h3>
                         <p className="text-xs text-muted-foreground">
                            {data.class.enrolled}/

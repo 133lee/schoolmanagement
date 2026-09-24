@@ -11,6 +11,7 @@ import {
   AssessmentStatus,
   TermType,
   DayOfWeek,
+  ECZGrade,
 } from "@prisma/client";
 
 /**
@@ -308,6 +309,64 @@ export async function createTestAssessmentResult(
 ) {
   return prisma.studentAssessmentResult.create({
     data: { studentId, assessmentId, marksObtained, isAbsent: overrides.isAbsent ?? false },
+  });
+}
+
+export async function createTestReportCard(
+  studentId: string,
+  classId: string,
+  termId: string,
+  academicYearId: string,
+  classTeacherId: string,
+  overrides: Partial<{ totalMarks: number; averageMark: number }> = {}
+) {
+  return prisma.reportCard.create({
+    data: {
+      studentId,
+      classId,
+      termId,
+      academicYearId,
+      classTeacherId,
+      totalMarks: overrides.totalMarks,
+      averageMark: overrides.averageMark,
+    },
+  });
+}
+
+/**
+ * A ReportCardSubject row for a student's report card. Defaults represent
+ * "nothing entered for this exam type yet" (null mark, absent flag false) —
+ * pass explicit marks/grade for a real result, or `{catAbsent: true}` etc.
+ * for a genuine AB, to exercise the "no data" vs "explicitly absent"
+ * distinction the grade-performance-report/subject-analysis services rely on.
+ */
+export async function createTestReportCardSubject(
+  reportCardId: string,
+  subjectId: string,
+  overrides: Partial<{
+    catMark: number | null;
+    midMark: number | null;
+    eotMark: number | null;
+    catAbsent: boolean;
+    midAbsent: boolean;
+    eotAbsent: boolean;
+    totalMark: number | null;
+    grade: ECZGrade | null;
+  }> = {}
+) {
+  return prisma.reportCardSubject.create({
+    data: {
+      reportCardId,
+      subjectId,
+      catMark: overrides.catMark ?? null,
+      midMark: overrides.midMark ?? null,
+      eotMark: overrides.eotMark ?? null,
+      catAbsent: overrides.catAbsent ?? false,
+      midAbsent: overrides.midAbsent ?? false,
+      eotAbsent: overrides.eotAbsent ?? false,
+      totalMark: overrides.totalMark ?? null,
+      grade: overrides.grade ?? null,
+    },
   });
 }
 

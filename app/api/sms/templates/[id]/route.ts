@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: `PUT /api/sms/templates/${id}` });
     }
-  })(request, {} as any);
+  })(request);
 }
 
 /** DELETE /api/sms/templates/[id] — delete template (admin only) */
@@ -32,5 +32,5 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     } catch (error) {
       return handleApiError(error, { userId: user.userId, endpoint: `DELETE /api/sms/templates/${id}` });
     }
-  })(request, {} as any);
+  })(request);
 }

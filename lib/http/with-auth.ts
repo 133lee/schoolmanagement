@@ -22,6 +22,8 @@ export interface AuthUser {
 export type AuthenticatedRouteHandler = (
   request: NextRequest,
   user: AuthUser,
+  // Route context ({ params } etc.) has a different shape per route.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context?: any
 ) => Promise<NextResponse>;
 
@@ -38,6 +40,7 @@ export type AuthenticatedRouteHandler = (
  * @returns Wrapped handler with authentication
  */
 export function withAuth(handler: AuthenticatedRouteHandler) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- route context shape varies per route
   return async (request: NextRequest, context?: any): Promise<NextResponse> => {
     try {
       // Extract Authorization header
@@ -133,6 +136,7 @@ export function withPermission(
   requiredPermission: string | string[],
   handler: AuthenticatedRouteHandler
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- route context shape varies per route
   return withAuth(async (request: NextRequest, user: AuthUser, context?: any) => {
     const permissions = Array.isArray(requiredPermission)
       ? requiredPermission
@@ -174,6 +178,7 @@ export function withRole(
   requiredRole: string | string[],
   handler: AuthenticatedRouteHandler
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- route context shape varies per route
   return withAuth(async (request: NextRequest, user: AuthUser, context?: any) => {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     const hasRole = roles.includes(user.role);
@@ -208,6 +213,7 @@ export function withRole(
  * @returns Wrapped handler with HOD access check
  */
 export function withHODAccess(handler: AuthenticatedRouteHandler) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- route context shape varies per route
   return withAuth(async (request: NextRequest, user: AuthUser, context?: any) => {
     try {
       // Check if user has a teacher profile

@@ -133,7 +133,7 @@ async function checkDatabaseState() {
       console.log("  npx prisma db push         (sync schema only)");
     }
     console.log("=".repeat(60));
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error checking database:", error.message);
   } finally {
     await prisma.$disconnect();

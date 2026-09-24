@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 import { api } from "@/lib/api-client";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
@@ -168,8 +168,8 @@ export default function DashboardPage() {
         setStatsError(null);
         const res = await api.get("/admin/dashboard/stats");
         setStats(res.data);
-      } catch (err: any) {
-        setStatsError(err.message || "Failed to load statistics");
+      } catch (err) {
+        setStatsError(getErrorMessage(err, "Failed to load statistics"));
       } finally {
         if (!bg) setStatsLoading(false);
       }

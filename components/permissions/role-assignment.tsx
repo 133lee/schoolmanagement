@@ -123,7 +123,7 @@ export function RoleAssignment({ user, onUpdate }: RoleAssignmentProps) {
         <CardHeader>
           <CardTitle>Role Assignment</CardTitle>
           <CardDescription>
-            Change the user's role to adjust their system-wide permissions
+            Change the user&apos;s role to adjust their system-wide permissions
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 lg:space-y-6">

@@ -1,4 +1,5 @@
 import { DayOfWeek, TimetableConfiguration, TimetableSlot } from "@/types/prisma-enums";
+import { formatCompactClassLabel } from "@/lib/utils";
 type Room = any; // Room model not yet in schema
 import { roomRepository } from "./room.repository";
 import { timetableConfigurationRepository } from "./timetableConfiguration.repository";
@@ -611,7 +612,7 @@ export class TimetableService {
       const assignment = assignments.find(a => a.id === activity.assignmentId);
       return {
         classId: activity.classId,
-        className: assignment?.class ? `${assignment.class.grade.name} ${assignment.class.name}` : 'Unknown',
+        className: assignment?.class ? formatCompactClassLabel(assignment.class.grade.name, assignment.class.name) : 'Unknown',
         subjectId: activity.subjectId,
         subjectName: assignment?.subject.name || 'Unknown',
         teacherId: activity.teacherId,

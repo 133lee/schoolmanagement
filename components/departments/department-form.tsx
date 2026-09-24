@@ -178,7 +178,7 @@ export function DepartmentForm({
                   Department Information
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter the department's basic details
+                  Enter the department&apos;s basic details
                 </p>
               </div>
 
@@ -318,7 +318,7 @@ export function DepartmentForm({
                         />
                       </FormControl>
                       <FormDescription>
-                        Brief description of the department's role
+                        Brief description of the department&apos;s role
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

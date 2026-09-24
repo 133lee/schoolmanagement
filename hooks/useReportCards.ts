@@ -297,6 +297,41 @@ export function useReportCards(
     []
   );
 
+  /**
+   * Bulk delete report cards — either an explicit id list (checked rows) or
+   * a filter set ("select all N matching filters"). Refetches afterward
+   * rather than patching local state optimistically, since a filter-based
+   * delete can remove rows outside the currently-loaded page.
+   */
+  const bulkDeleteReportCards = useCallback(
+    async (params: { ids?: string[]; filters?: ReportCardFilters }) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await apiRequest<{ data: { deletedCount: number } }>(
+          `/report-cards/bulk`,
+          {
+            method: "DELETE",
+            body: JSON.stringify(params),
+          }
+        );
+
+        await fetchReportCards();
+
+        return response.data;
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to bulk delete report cards"
+        );
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [fetchReportCards]
+  );
+
   // Fetch report cards on mount and when filters/pagination change
   // Only fetch if authenticated to prevent infinite loops on 401 errors
   useEffect(() => {
@@ -334,5 +369,6 @@ export function useReportCards(
     calculatePositions,
     updateReportCard,
     deleteReportCard,
+    bulkDeleteReportCards,
   };
 }

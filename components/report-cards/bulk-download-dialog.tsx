@@ -33,7 +33,8 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, Download } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { useTerms } from "@/hooks/useTerms";
-import { useReportCards } from "@/hooks/useReportCards";
+import { apiRequest } from "@/lib/api-client";
+import { ReportCard } from "@/types/prisma-enums";
 import { downloadClassReportCards } from "@/lib/pdf-generator";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,7 +60,6 @@ export function BulkDownloadDialog({
 
   const { classes, isLoading: classesLoading } = useClasses({ mode: "all" }, { page: 1, pageSize: 10 });
   const { terms, isLoading: termsLoading } = useTerms();
-  const { reportCards, refetch } = useReportCards();
 
   const form = useForm<BulkDownloadFormValues>({
     resolver: zodResolver(bulkDownloadSchema),
@@ -74,10 +74,20 @@ export function BulkDownloadDialog({
       setIsDownloading(true);
       setProgress(0);
 
-      // Filter report cards for the selected class and term
-      const filtered = reportCards.filter(
-        (rc) => rc.classId === data.classId && rc.termId === data.termId
-      );
+      // Fetch every report card for this class + term directly (scoped by
+      // filter, not the paginated default list), paging through the
+      // repository's 100-per-page cap in case a class exceeds that.
+      const filtered: ReportCard[] = [];
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const res = await apiRequest<{ data: ReportCard[]; meta: { totalPages: number } }>(
+          `/report-cards?classId=${data.classId}&termId=${data.termId}&page=${page}&pageSize=100`
+        );
+        filtered.push(...res.data);
+        totalPages = res.meta.totalPages;
+        page++;
+      } while (page <= totalPages);
 
       if (filtered.length === 0) {
         toast({

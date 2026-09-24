@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * Admin Grade Fix Page
@@ -61,8 +62,8 @@ export default function FixGradesPage() {
 
       const data = await response.json();
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err) {
+      setError(getErrorMessage(err, "An error occurred"));
     } finally {
       setLoading(false);
     }

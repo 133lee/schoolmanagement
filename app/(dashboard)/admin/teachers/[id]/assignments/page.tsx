@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -28,7 +29,7 @@ interface Assignment {
   };
   class: {
     id: string;
-    section: string;
+    name: string;
     grade: {
       id: string;
       name: string;
@@ -269,7 +270,7 @@ export default function TeacherAssignmentsPage() {
                           className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm"
                         >
                           <Users className="h-4 w-4" />
-                          {classItem.grade.name} {classItem.section}
+                          {formatCompactClassLabel(classItem.grade.name, classItem.name)}
                         </div>
                       ))}
                     </div>

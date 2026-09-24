@@ -180,7 +180,7 @@ export function ParentForm({
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Personal Information</h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter the guardian's basic contact details
+                  Enter the guardian&apos;s basic contact details
                 </p>
               </div>
 
@@ -337,7 +337,7 @@ export function ParentForm({
                         <Input placeholder="123 Main Street, City" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Guardian's residential address
+                        Guardian&apos;s residential address
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -124,8 +125,8 @@ export default function ClassAssignmentsPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {
-          const data = await response.json();
-          setClassName(`${data.grade.name} ${data.section}`);
+          const { data } = await response.json();
+          setClassName(formatCompactClassLabel(data.grade.name, data.name));
         }
       } catch (error) {
         console.error("Error fetching class:", error);
@@ -239,11 +240,11 @@ export default function ClassAssignmentsPage() {
       setNewTeacherId("");
       setNewSubjectId("");
       fetchAssignments();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating assignment:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create assignment",
+        description: getErrorMessage(error, "Failed to create assignment"),
         variant: "destructive",
       });
     } finally {
@@ -277,11 +278,11 @@ export default function ClassAssignmentsPage() {
       });
 
       fetchAssignments();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting assignment:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to remove assignment",
+        description: getErrorMessage(error, "Failed to remove assignment"),
         variant: "destructive",
       });
     } finally {

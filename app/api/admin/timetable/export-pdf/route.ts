@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToStream } from "@react-pdf/renderer";
+import { asPdfDocument } from "@/lib/pdf/as-pdf-document";
 import React from "react";
 import JSZip from "jszip";
 import { withAuth } from "@/lib/http/with-auth";
@@ -7,7 +8,7 @@ import { handleApiError } from "@/lib/http/error-handler";
 import { TimetablePDF } from "@/lib/pdf/timetable-pdf";
 import { timetableService } from "@/features/timetables/timetable.service";
 import { getSchoolInfo, getSchoolLogoBase64 } from "@/lib/settings/school-info-helper";
-import { formatClassLabel } from "@/lib/utils";
+import { formatCompactClassLabel } from "@/lib/utils";
 import { logger } from "@/lib/logger/logger";
 import { Role } from "@/types/prisma-enums";
 import { AuthContext } from "@/lib/auth/authorization";
@@ -69,8 +70,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           }
 
           const pdfComponent = React.createElement(TimetablePDF, {
-            className: formatClassLabel(classItem.grade.name, classItem.name),
-            slots: result.slots as any,
+            className: formatCompactClassLabel(classItem.grade.name, classItem.name),
+            slots: result.slots,
             periodSlots,
             generatedDate: new Date().toLocaleDateString("en-GB"),
             schoolName: schoolInfo.name,
@@ -79,7 +80,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           });
 
           const buffer = await pdfLimiter.run(async () => {
-            const stream = await renderToStream(pdfComponent as any);
+            const stream = await renderToStream(asPdfDocument(pdfComponent));
             return streamToBuffer(stream);
           });
 
@@ -126,8 +127,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       }
 
       const pdfComponent = React.createElement(TimetablePDF, {
-        className: formatClassLabel(classData.grade.name, classData.name),
-        slots: result.slots as any,
+        className: formatCompactClassLabel(classData.grade.name, classData.name),
+        slots: result.slots,
         periodSlots,
         generatedDate: new Date().toLocaleDateString("en-GB"),
         schoolName: schoolInfo.name,
@@ -136,7 +137,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       });
 
       const pdfBuffer = await pdfLimiter.run(async () => {
-        const stream = await renderToStream(pdfComponent as any);
+        const stream = await renderToStream(asPdfDocument(pdfComponent));
         return streamToBuffer(stream);
       });
 
@@ -175,7 +176,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
       const pdfComponent = React.createElement(TimetablePDF, {
         className: `${teacher.firstName} ${teacher.lastName} - Teacher Timetable`,
-        slots: result.slots as any,
+        slots: result.slots,
         periodSlots,
         generatedDate: new Date().toLocaleDateString("en-GB"),
         schoolName: schoolInfo.name,
@@ -184,7 +185,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       });
 
       const pdfBuffer = await pdfLimiter.run(async () => {
-        const stream = await renderToStream(pdfComponent as any);
+        const stream = await renderToStream(asPdfDocument(pdfComponent));
         return streamToBuffer(stream);
       });
 

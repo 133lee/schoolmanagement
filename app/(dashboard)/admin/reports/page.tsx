@@ -11,6 +11,7 @@ import {
   BarChart3,
   TrendingUp,
   RefreshCw,
+  FileDown,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminSubjectAnalysisContent } from "@/components/admin/admin-subject-analysis-content";
@@ -18,6 +19,9 @@ import { AdminReportsHeader } from "@/components/reports/admin-reports-header";
 import { PerformanceListsContent } from "@/components/reports/performance-lists-content";
 import { api } from "@/lib/api-client";
 import { useMobileHeaderRefresh } from "@/hooks/useMobileHeaderRefresh";
+import { downloadGradePerformanceReportPdf } from "@/lib/pdf/grade-performance-report-pdf";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 
 interface GradeOption {
   id: string;
@@ -47,7 +51,7 @@ interface TermOption {
 
 export default function AdminReportsPage() {
   const [activeTab, setActiveTab] = useState<
-    "subject-analysis" | "performance-lists"
+    "subject-analysis" | "performance-lists" | "grade-report"
   >("subject-analysis");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
@@ -61,7 +65,41 @@ export default function AdminReportsPage() {
   const [terms, setTerms] = useState<TermOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportingGradeReport, setExportingGradeReport] = useState(false);
   const initializedRef = useRef(false);
+
+  const handleExportGradeReport = async () => {
+    if (!selectedGrade || !selectedTerm) return;
+    setExportingGradeReport(true);
+    try {
+      const response = await api.get(
+        `/admin/reports/grade-performance?gradeId=${selectedGrade}&termId=${selectedTerm}`
+      );
+      const reportData = response.data;
+
+      let schoolName: string | undefined;
+      try {
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch("/api/admin/settings/school-info", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const info = json.data || json;
+          schoolName = info.settings?.name || undefined;
+        }
+      } catch {
+        /* non-fatal */
+      }
+
+      await downloadGradePerformanceReportPdf(reportData, { schoolName });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to export grade report";
+      toast.error(message);
+    } finally {
+      setExportingGradeReport(false);
+    }
+  };
 
   // Convention filter only applies to Grade 8 and Grade 9 (ambiguous levels)
   const selectedGradeData = grades.find((g) => g.id === selectedGrade);
@@ -105,18 +143,10 @@ export default function AdminReportsPage() {
         setSelectedTerm(activeTerm.id);
       }
 
-      // Fetch subjects
-      const subjectsResponse = await api.get("/admin/reports/subjects");
-      const subjectsData = subjectsResponse.data?.subjects || [];
-      setSubjects(subjectsData);
-      if (subjectsData.length > 0) {
-        setSelectedSubject(subjectsData[0].id);
-      }
-
       setLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching initial data:", err);
-      setError(err.message || "Failed to load initial data");
+      setError(getErrorMessage(err, "Failed to load initial data"));
       setLoading(false);
     }
   };
@@ -132,7 +162,11 @@ export default function AdminReportsPage() {
   // layout's header instead of the inline "Refresh" button below.
   useMobileHeaderRefresh(fetchInitialData, loading);
 
-  // Fetch classes when grade changes
+  // Fetch classes + subjects when grade changes. Subjects are scoped to
+  // this grade — not every class in a grade offers every subject (e.g. one
+  // stream takes Geography, another Religious Education instead), so a
+  // grade-wide subject list would otherwise let the admin pick a subject
+  // that class doesn't even teach.
   useEffect(() => {
     async function fetchClasses() {
       if (!selectedGrade) {
@@ -152,14 +186,40 @@ export default function AdminReportsPage() {
         } else {
           setSelectedClass("");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching classes:", err);
         setClasses([]);
         setSelectedClass("");
       }
     }
 
+    async function fetchSubjects() {
+      if (!selectedGrade) {
+        setSubjects([]);
+        setSelectedSubject("");
+        return;
+      }
+
+      try {
+        const subjectsResponse = await api.get(
+          `/admin/reports/subjects?gradeId=${selectedGrade}`
+        );
+        const subjectsData: SubjectOption[] = subjectsResponse.data?.subjects || [];
+        setSubjects(subjectsData);
+        setSelectedSubject((current) =>
+          subjectsData.some((s) => s.id === current)
+            ? current
+            : subjectsData[0]?.id || ""
+        );
+      } catch (err) {
+        console.error("Error fetching subjects:", err);
+        setSubjects([]);
+        setSelectedSubject("");
+      }
+    }
+
     fetchClasses();
+    fetchSubjects();
   }, [selectedGrade]);
 
   return (
@@ -231,21 +291,27 @@ export default function AdminReportsPage() {
         <Tabs
           value={activeTab}
           onValueChange={(v) =>
-            setActiveTab(v as "subject-analysis" | "performance-lists")
+            setActiveTab(v as "subject-analysis" | "performance-lists" | "grade-report")
           }
           className="w-full mt-5 lg:mt-0">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+          <TabsList className="grid w-full grid-cols-3 bg-muted/50">
             <TabsTrigger
               value="subject-analysis"
-              className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-              <BarChart3 className="h-4 w-4 mr-2" />
+              className="px-1 text-xs leading-tight whitespace-normal sm:px-2 sm:text-sm sm:whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+              <BarChart3 className="hidden sm:block h-4 w-4 mr-2" />
               Subject Analysis
             </TabsTrigger>
             <TabsTrigger
               value="performance-lists"
-              className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-              <TrendingUp className="h-4 w-4 mr-2" />
+              className="px-1 text-xs leading-tight whitespace-normal sm:px-2 sm:text-sm sm:whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+              <TrendingUp className="hidden sm:block h-4 w-4 mr-2" />
               Performance Lists
+            </TabsTrigger>
+            <TabsTrigger
+              value="grade-report"
+              className="px-1 text-xs leading-tight whitespace-normal sm:px-2 sm:text-sm sm:whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+              <FileDown className="hidden sm:block h-4 w-4 mr-2" />
+              Grade Report
             </TabsTrigger>
           </TabsList>
 
@@ -356,6 +422,59 @@ export default function AdminReportsPage() {
                 apiEndpoint="/api/admin/reports/performance"
               />
             )}
+          </TabsContent>
+
+          {/* Grade Report Tab — a separate PDF export, not a filtered view
+              of the other tabs. It only ever depends on Grade + Term (shown
+              below), never on the Subject/Class/Convention filters used
+              elsewhere on this page, so it gets its own tab rather than
+              sharing a filter bar where those extra controls would wrongly
+              imply they affect the export too. */}
+          <TabsContent value="grade-report" className="mt-6 space-y-6">
+            <AdminReportsHeader
+              selectedGrade={selectedGrade}
+              onGradeChange={handleGradeChange}
+              selectedClass={selectedClass}
+              onClassChange={setSelectedClass}
+              selectedSubject={selectedSubject}
+              onSubjectChange={setSelectedSubject}
+              selectedTerm={selectedTerm}
+              onTermChange={setSelectedTerm}
+              showConventionFilter={false}
+              hideClassFilter={true}
+              hideSubjectFilter={true}
+              grades={grades}
+              classes={classes}
+              subjects={subjects}
+              terms={terms}
+              mobileCompactFilters
+            />
+
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <div>
+                  <p className="font-medium">Ministry-style Grade Report</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Exports a two-page PDF for the selected grade and term:
+                    every subject across all streams, gender-split ENTERED /
+                    SAT / ABSENT / grade distribution, a Teachers summary,
+                    and an Overall Performance page (School Certificate /
+                    GCE / Fail). This uses only the Grade and Term selected
+                    above — no Subject or Class filter applies to it.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleExportGradeReport}
+                  disabled={!selectedGrade || !selectedTerm || exportingGradeReport}>
+                  {exportingGradeReport ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4 mr-2" />
+                  )}
+                  Export Grade Report
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       )}

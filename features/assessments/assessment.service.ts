@@ -10,6 +10,7 @@ import { UnauthorizedError, NotFoundError, ValidationError } from "@/lib/errors"
 import { requireMinimumRole, AuthContext } from "@/lib/auth/authorization";
 import { hasRoleAuthority } from "@/lib/auth/role-hierarchy";
 import prisma from "@/lib/db/prisma";
+import { getErrorMessage } from "@/lib/utils";
 
 /**
  * Assessment Service - Business Logic Layer
@@ -403,34 +404,37 @@ export class AssessmentService {
     const { page, pageSize } = pagination;
     const skip = (page - 1) * pageSize;
 
-    // Build where clause
-    const where: Prisma.AssessmentWhereInput = {};
+    // Build where clause without status, so it can be reused as-is for the
+    // per-status counts below (those must reflect every status matching the
+    // other filters, regardless of which status is currently selected).
+    const baseWhere: Prisma.AssessmentWhereInput = {};
 
     if (filters.subjectId) {
-      where.subjectId = filters.subjectId;
+      baseWhere.subjectId = filters.subjectId;
     }
 
     if (filters.classId) {
-      where.classId = filters.classId;
+      baseWhere.classId = filters.classId;
     }
 
     if (filters.termId) {
-      where.termId = filters.termId;
+      baseWhere.termId = filters.termId;
     }
 
     if (filters.examType) {
-      where.examType = filters.examType;
+      baseWhere.examType = filters.examType;
     }
 
-    if (filters.status) {
-      where.status = filters.status;
-    }
+    const where: Prisma.AssessmentWhereInput = filters.status
+      ? { ...baseWhere, status: filters.status }
+      : baseWhere;
 
     const scope = await this.getTeacherAssessmentScope(context);
     const finalWhere: Prisma.AssessmentWhereInput = scope ? { AND: [where, scope] } : where;
+    const finalBaseWhere: Prisma.AssessmentWhereInput = scope ? { AND: [baseWhere, scope] } : baseWhere;
 
     // Fetch data
-    const [assessments, total] = await Promise.all([
+    const [assessments, total, statusGroups] = await Promise.all([
       assessmentRepository.findMany({
         skip,
         take: pageSize,
@@ -456,7 +460,22 @@ export class AssessmentService {
         orderBy: { assessmentDate: "desc" },
       }),
       assessmentRepository.count(finalWhere),
+      prisma.assessment.groupBy({
+        by: ["status"],
+        where: finalBaseWhere,
+        _count: true,
+      }),
     ]);
+
+    const statusCounts: Record<AssessmentStatus, number> = {
+      DRAFT: 0,
+      PUBLISHED: 0,
+      COMPLETED: 0,
+      ARCHIVED: 0,
+    };
+    for (const group of statusGroups) {
+      statusCounts[group.status] = group._count;
+    }
 
     return {
       data: assessments,
@@ -466,6 +485,7 @@ export class AssessmentService {
         total,
         totalPages: Math.ceil(total / pageSize),
       },
+      statusCounts,
     };
   }
 
@@ -658,26 +678,29 @@ export class AssessmentService {
       throw new NotFoundError("Assessment not found");
     }
 
-    // Authorization - Teachers can only delete their own DRAFT assessments
-    // Admins and HEAD_TEACHER can delete any draft assessment
+    // Authorization - Teachers can delete DRAFT or PUBLISHED assessments
+    // they manage (verified below), including ones with results — this is
+    // the intended cleanup path for duplicate/erroneous assessment
+    // instances (e.g. a second CAT accidentally created for the same exam,
+    // repeatedly re-entered). COMPLETED assessments stay admin/head-teacher
+    // gated and results-must-be-empty, since completed data may already be
+    // baked into generated report cards — reopen it first to delete it.
     const isAdmin = hasRoleAuthority(context.role, Role.ADMIN);
     const isHeadTeacher = hasRoleAuthority(context.role, Role.HEAD_TEACHER);
-    const isTeacher = context.role === Role.TEACHER;
 
     if (!isAdmin && !isHeadTeacher) {
-      // Teachers can only delete DRAFT assessments
-      if (assessment.status !== AssessmentStatus.DRAFT) {
+      if (
+        assessment.status !== AssessmentStatus.DRAFT &&
+        assessment.status !== AssessmentStatus.PUBLISHED
+      ) {
         throw new UnauthorizedError(
-          "You can only delete draft assessments. Published or completed assessments cannot be deleted."
+          "You can only delete draft or published assessments. Reopen a completed assessment before deleting it."
         );
       }
 
-      // Teachers can only delete assessments they have permission to manage
-      if (!isTeacher) {
-        throw new UnauthorizedError(
-          "You do not have permission to delete assessments"
-        );
-      }
+      // Teachers can only delete assessments they teach this class+subject
+      // for (HOD-of-department and DEPUTY_HEAD+ pass via verifyAssessmentAccess)
+      await this.verifyAssessmentAccess(context, assessment.classId, assessment.subjectId);
     }
 
     // Business rule: Cannot delete from closed year
@@ -687,12 +710,14 @@ export class AssessmentService {
       );
     }
 
-    // Business rule: Admins/Head Teachers cannot delete published assessments with results
-    if (assessment.status !== AssessmentStatus.DRAFT) {
+    // Business rule: COMPLETED assessments still require results to be
+    // cleared first (reopen, then delete) — DRAFT/PUBLISHED assessments can
+    // be deleted with results attached; the results cascade-delete with them.
+    if (assessment.status === AssessmentStatus.COMPLETED) {
       const results = await studentAssessmentResultRepository.findByAssessmentId(id);
       if (results && results.length > 0) {
         throw new ValidationError(
-          "Cannot delete assessment with existing results. Delete results first."
+          "Cannot delete a completed assessment with existing results. Reopen it first."
         );
       }
     }
@@ -941,10 +966,10 @@ export class AssessmentService {
             remarks: input.remarks,
           });
         }
-      } catch (error: any) {
+      } catch (error) {
         failed.push({
           studentId: input.studentId,
-          error: error.message || "Unknown error",
+          error: getErrorMessage(error, "Unknown error"),
         });
       }
     }
@@ -996,7 +1021,7 @@ export class AssessmentService {
     }
 
     // Exclude absent students from statistical calculations
-    const presentResults = results.filter((r) => !(r as any).isAbsent);
+    const presentResults = results.filter((r) => !r.isAbsent);
     const absentCount = results.length - presentResults.length;
 
     const marks = presentResults.map((r) => r.marksObtained);

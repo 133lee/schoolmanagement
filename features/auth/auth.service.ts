@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { authRepository, UserWithProfile } from "./auth.repository";
 import { Role } from "@/types/prisma-enums";
 import { ValidationError, NotFoundError, UnauthorizedError as InvalidCredentialsError } from "@/lib/http/errors";
+import { logger } from "@/lib/logger/logger";
 
 const rawJwtSecret = process.env.JWT_SECRET;
 if (!rawJwtSecret) {
@@ -147,7 +148,7 @@ export class AuthService {
       };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        console.error("[Auth Service] Token expired:", error.message);
+        logger.warn("Token expired", { reason: error.message });
         return {
           valid: false,
           error: "Token has expired",
@@ -155,14 +156,18 @@ export class AuthService {
       }
 
       if (error instanceof jwt.JsonWebTokenError) {
-        console.error("[Auth Service] Invalid token:", error.message);
+        logger.warn("Invalid token", { reason: error.message });
         return {
           valid: false,
           error: "Invalid token",
         };
       }
 
-      console.error("[Auth Service] Token verification error:", error);
+      logger.error(
+        "Token verification error",
+        error instanceof Error ? error : undefined,
+        error instanceof Error ? undefined : { detail: String(error) }
+      );
       return {
         valid: false,
         error: "Token verification failed",

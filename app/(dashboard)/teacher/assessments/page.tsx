@@ -34,7 +34,6 @@ import {
   Plus,
   FileText,
   Trash2,
-  Eye,
   ClipboardEdit,
   CalendarDays,
   BookOpen,
@@ -54,7 +53,7 @@ import {
 } from "@/components/ui/empty";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
-import { cn, formatClassLabel, formatCompactClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 
 /**
  * Teacher Assessments Page
@@ -268,11 +267,11 @@ export default function TeacherAssessmentsPage() {
       if (selectedExamType !== "all") params.append("examType", selectedExamType);
       const result = await api.get(`/assessments?${params.toString()}`);
       setAssessments(result.data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching assessments:", error);
       toast({
         title: "Failed to Load Assessments",
-        description: error.message || "Could not fetch assessments. Please try again.",
+        description: getErrorMessage(error, "Could not fetch assessments. Please try again."),
         variant: "destructive",
       });
       setAssessments([]);
@@ -293,8 +292,8 @@ export default function TeacherAssessmentsPage() {
       toast({ title: "Assessment Deleted", description: "The assessment has been successfully removed." });
       if (selectedAssessmentId === pendingDeleteId) updateURL(null);
       fetchAssessments();
-    } catch (error: any) {
-      toast({ title: "Failed to Delete", description: error.message || "Could not delete assessment.", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Failed to Delete", description: getErrorMessage(error, "Could not delete assessment."), variant: "destructive" });
     } finally {
       setDeleteDialogOpen(false);
       setPendingDeleteId(null);
@@ -307,8 +306,8 @@ export default function TeacherAssessmentsPage() {
       await api.post(`/assessments/${pendingPublishId}/publish`, {});
       toast({ title: "Assessment Published", description: "The assessment is now live and ready for result entry." });
       fetchAssessments();
-    } catch (error: any) {
-      toast({ title: "Failed to Publish", description: error.message || "Could not publish assessment.", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Failed to Publish", description: getErrorMessage(error, "Could not publish assessment."), variant: "destructive" });
     } finally {
       setPublishDialogOpen(false);
       setPendingPublishId(null);
@@ -321,8 +320,8 @@ export default function TeacherAssessmentsPage() {
       await api.post(`/assessments/${pendingCompleteId}/complete`, {});
       toast({ title: "Assessment Completed", description: "The assessment has been marked as completed and can now be used for report card generation." });
       fetchAssessments();
-    } catch (error: any) {
-      toast({ title: "Failed to Complete", description: error.message || "Could not complete assessment.", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Failed to Complete", description: getErrorMessage(error, "Could not complete assessment."), variant: "destructive" });
     } finally {
       setCompleteDialogOpen(false);
       setPendingCompleteId(null);
@@ -335,8 +334,8 @@ export default function TeacherAssessmentsPage() {
       await api.post(`/assessments/${pendingReopenId}/reopen`, {});
       toast({ title: "Assessment Reopened", description: "The assessment is back to Published status and can be edited again." });
       fetchAssessments();
-    } catch (error: any) {
-      toast({ title: "Failed to Reopen", description: error.message || "Could not reopen assessment.", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Failed to Reopen", description: getErrorMessage(error, "Could not reopen assessment."), variant: "destructive" });
     } finally {
       setReopenDialogOpen(false);
       setPendingReopenId(null);
@@ -372,8 +371,8 @@ export default function TeacherAssessmentsPage() {
       });
       updateURL(null);
       fetchAssessments();
-    } catch (error: any) {
-      toast({ title: "Failed to Delete Drafts", description: error.message || "Could not delete draft assessments.", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Failed to Delete Drafts", description: getErrorMessage(error, "Could not delete draft assessments."), variant: "destructive" });
     } finally {
       setBulkDeleteDialogOpen(false);
     }
@@ -428,6 +427,7 @@ export default function TeacherAssessmentsPage() {
   }, [displayedAssessments, selectedAssessmentId]);
 
   const selectedAssessment = displayedAssessments.find((a) => a.id === selectedAssessmentId);
+  const pendingDeleteAssessment = displayedAssessments.find((a) => a.id === pendingDeleteId);
 
   // Shared detail + action content — used in both the desktop left card and the mobile sheet
   const DetailContent = ({ assessment }: { assessment: Assessment }) => (
@@ -451,7 +451,7 @@ export default function TeacherAssessmentsPage() {
               <span className="text-sm">Class</span>
             </div>
             <p className="font-medium">
-              {formatClassLabel(assessment.class.grade.name, assessment.class.name)}
+              {formatCompactClassLabel(assessment.class.grade.name, assessment.class.name)}
             </p>
           </div>
 
@@ -539,6 +539,13 @@ export default function TeacherAssessmentsPage() {
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Mark as Completed
             </Button>
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={() => handleDeleteClick(assessment.id)}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
           </>
         ) : (
           <>
@@ -557,14 +564,6 @@ export default function TeacherAssessmentsPage() {
             </Button>
           </>
         )}
-
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => router.push(`/teacher/assessments/${assessment.id}`)}>
-          <Eye className="h-4 w-4 mr-2" />
-          View Details
-        </Button>
       </div>
     </>
   );
@@ -590,7 +589,7 @@ export default function TeacherAssessmentsPage() {
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{assessment.subject.name}</p>
               <p className="text-xs text-muted-foreground">
-                {formatClassLabel(assessment.class.grade.name, assessment.class.name)}
+                {formatCompactClassLabel(assessment.class.grade.name, assessment.class.name)}
               </p>
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
@@ -640,7 +639,7 @@ export default function TeacherAssessmentsPage() {
                       {selectedAssessment.subject.name} — {selectedAssessment.examType}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {formatClassLabel(selectedAssessment.class.grade.name, selectedAssessment.class.name)}
+                      {formatCompactClassLabel(selectedAssessment.class.grade.name, selectedAssessment.class.name)}
                     </p>
                   </div>
                 </div>
@@ -878,7 +877,7 @@ export default function TeacherAssessmentsPage() {
                   {selectedAssessment.subject.name} — {selectedAssessment.examType}
                 </SheetTitle>
                 <p className="text-sm text-muted-foreground text-left pb-1">
-                  {formatClassLabel(selectedAssessment.class.grade.name, selectedAssessment.class.name)}
+                  {formatCompactClassLabel(selectedAssessment.class.grade.name, selectedAssessment.class.name)}
                 </p>
               </SheetHeader>
 
@@ -903,7 +902,14 @@ export default function TeacherAssessmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Assessment</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this draft assessment? This action cannot be undone.
+              {pendingDeleteAssessment && pendingDeleteAssessment._count.results > 0 ? (
+                <>
+                  This assessment has <strong>{pendingDeleteAssessment._count.results} result{pendingDeleteAssessment._count.results === 1 ? "" : "s"}</strong> entered.
+                  Deleting it will permanently delete those results too. This action cannot be undone.
+                </>
+              ) : (
+                "Are you sure you want to delete this assessment? This action cannot be undone."
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -955,8 +961,8 @@ export default function TeacherAssessmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Reopen Assessment</AlertDialogTitle>
             <AlertDialogDescription>
-              This will return the assessment to Published status so you can correct marks. You'll
-              need to mark it as completed again once you're done.
+              This will return the assessment to Published status so you can correct marks. You&apos;ll
+              need to mark it as completed again once you&apos;re done.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

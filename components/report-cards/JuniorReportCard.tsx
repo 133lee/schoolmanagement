@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 11,
     fontWeight: 'bold',
+    marginBottom: 3,
   },
   infoTable: {
     marginBottom: 15,

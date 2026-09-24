@@ -18,7 +18,7 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn, formatClassLabel } from "@/lib/utils";
+import { cn, formatCompactClassLabel, getErrorMessage } from "@/lib/utils";
 import { SessionRegisterSheet } from "@/components/attendance/session-register-sheet";
 import {
   Card,
@@ -440,8 +440,8 @@ export default function AttendancePage() {
           toast.warning(`Period ${partner.periodNumber} pre-fill failed — mark it manually.`);
         }
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save attendance");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to save attendance"));
     } finally {
       setSubmitting(false);
     }
@@ -484,8 +484,8 @@ export default function AttendancePage() {
       toast.success("Lesson logged");
       setLogDialogOpen(false);
       refreshRemedial();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to log lesson");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to log lesson"));
     } finally {
       setLoggingLesson(false);
     }
@@ -518,8 +518,8 @@ export default function AttendancePage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to download remedial list");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to download remedial list"));
     } finally {
       setDownloadingPdf(false);
     }
@@ -620,7 +620,7 @@ export default function AttendancePage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <BookOpen className="h-3 w-3 shrink-0" />
-                  {formatClassLabel(slot.class.grade.name, slot.class.name)}
+                  {formatCompactClassLabel(slot.class.grade.name, slot.class.name)}
                 </span>
                 {slot.roomNumber && (
                   <span className="flex items-center gap-1">

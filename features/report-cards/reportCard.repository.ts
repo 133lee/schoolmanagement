@@ -271,6 +271,15 @@ export class ReportCardRepository {
   }
 
   /**
+   * Delete every report card matching a where clause (explicit id list or
+   * filters) in one statement — not a loop of single deletes.
+   */
+  async deleteMany(where: Prisma.ReportCardWhereInput): Promise<number> {
+    const result = await prisma.reportCard.deleteMany({ where });
+    return result.count;
+  }
+
+  /**
    * Delete report card
    */
   async delete(id: string): Promise<ReportCard> {
